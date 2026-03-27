@@ -171,6 +171,9 @@ async function fetchSeatGeekVenue(venueId, venue, clientId) {
   // Filter to music events only
   const excludeTypes = ['sports', 'nhl', 'nba', 'nfl', 'mlb', 'mls', 'ncaa', 'hockey', 'basketball', 'football', 'baseball', 'soccer', 'comedy', 'theater', 'theatre', 'family', 'circus', 'wrestling', 'boxing', 'mma', 'monster_truck'];
   
+  // Sports team names that appear in event titles
+  const sportsTeams = ['hurricanes', 'canadiens', 'bruins', 'penguins', 'capitals', 'rangers', 'islanders', 'devils', 'flyers', 'blue jackets', 'maple leafs', 'senators', 'panthers', 'lightning', 'red wings', 'sabres', 'predators', 'blackhawks', 'wild', 'avalanche', 'stars', 'blues', 'jets', 'oilers', 'flames', 'canucks', 'kraken', 'golden knights', 'sharks', 'ducks', 'kings', 'coyotes', 'wolfpack', 'nc state', 'tar heels', 'duke', 'blue devils', 'demon deacons', 'hornets', 'bobcats', 'panthers'];
+  
   return eventsData.events
     .filter(e => {
       const type = (e.type || '').toLowerCase();
@@ -179,10 +182,14 @@ async function fetchSeatGeekVenue(venueId, venue, clientId) {
       const allTaxStr = taxonomy.join(' ');
       
       // Exclude if any taxonomy or type matches sports/non-music
-      const isExcluded = excludeTypes.some(ex => 
-        type.includes(ex) || allTaxStr.includes(ex) || title.includes(' at hurricanes') || title.includes(' vs ')
+      const isExcludedType = excludeTypes.some(ex => 
+        type.includes(ex) || allTaxStr.includes(ex)
       );
-      if (isExcluded) return false;
+      if (isExcludedType) return false;
+      
+      // Exclude if title contains " at " or " vs " with sports team names
+      if (title.includes(' vs ') || title.includes(' vs. ')) return false;
+      if (title.includes(' at ') && sportsTeams.some(team => title.includes(team))) return false;
       
       // Include if it's clearly a concert/music event
       const isMusic = type.includes('concert') || 
