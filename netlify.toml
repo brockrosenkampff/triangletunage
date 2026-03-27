@@ -1,0 +1,23 @@
+[build]
+  publish = "/"
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
+
+# Increase function timeout for Claude API calls (can be slow with web search)
+[functions."events"]
+  external_node_modules = []
+
+# Redirect www to root
+[[redirects]]
+  from = "https://www.triangletunage.com/*"
+  to = "https://triangletunage.com/:splat"
+  status = 301
+  force = true
+
+# Headers for caching
+[[headers]]
+  for = "/api/events"
+  [headers.values]
+    Cache-Control = "public, max-age=3600"

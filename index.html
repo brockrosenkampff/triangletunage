@@ -663,91 +663,10 @@ function hideProgress() {
 }
 
 // ---- FETCH REAL SHOWS ----
-async function fetchVenueEvents(venueId, venue) {
-  const today = new Date();
-  const todayStr = today.toISOString().split('T')[0];
-  const futureDate = new Date(today.getFullYear(), today.getMonth() + 2, 1);
-  const futureStr = futureDate.toISOString().split('T')[0];
-
-  const prompt = `Search for upcoming concerts and live music events at ${venue.name} in ${venue.city}, NC. The venue's calendar/website is: ${venue.calendarUrl}
-
-Search their website and any event listings to find REAL, CONFIRMED upcoming music events from ${todayStr} through ${futureStr}.
-
-CRITICAL RULES:
-- Only return events you found in actual search results — do NOT invent or guess events
-- Only include music events (concerts, live bands, DJ sets, singer-songwriters)
-- Exclude comedy shows, ballet, plays, film screenings, fundraisers, private events
-- If you cannot find any confirmed events, return an empty array []
-
-Return ONLY a valid JSON array (no markdown, no preamble). Each object must have:
-{
-  "venueId": "${venueId}",
-  "title": "Artist/Show Name",
-  "date": "YYYY-MM-DD",
-  "time": "8:00 PM",
-  "doors": "7:00 PM" or null,
-  "price": "$20" or "$20-$45" or "Free" or "TBA",
-  "genre": "Indie Rock",
-  "description": "Brief 1-sentence description from the listing",
-  "ticketUrl": "actual ticket URL if found, otherwise ${venue.ticketBase}",
-  "isEtix": ${venue.isEtix},
-  "source": "url where you found this event"
-}
-
-Return ONLY the raw JSON array. No explanation, no markdown fences.`;
-
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 4000,
-      tools: [{ type: 'web_search_20250305', name: 'web_search' }],
-      messages: [{ role: 'user', content: prompt }],
-    }),
-  });
-
-  if (!response.ok) throw new Error(`API returned ${response.status}: ${response.statusText}`);
-
-  const data = await response.json();
-  const textBlocks = data.content.filter(b => b.type === 'text').map(b => b.text);
-  const raw = textBlocks.join('');
-  const clean = raw.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
-  const arrayMatch = clean.match(/\[[\s\S]*\]/);
-  if (!arrayMatch) {
-    console.warn(`No JSON array found for ${venue.name}:`, clean.slice(0, 200));
-    return [];
-  }
-
-  const events = JSON.parse(arrayMatch[0]);
-  return events
-    .filter(e => e.title && e.date && e.date.match(/^\d{4}-\d{2}-\d{2}$/))
-    .map(e => ({
-      venueId,
-      title: String(e.title),
-      date: e.date,
-      time: e.time || 'TBA',
-      doors: e.doors || null,
-      price: e.price || 'TBA',
-      genre: e.genre || 'Live Music',
-      description: e.description || `Live at ${venue.name}`,
-      ticketUrl: e.ticketUrl || venue.ticketBase,
-      isEtix: venue.isEtix,
-      source: e.source || venue.calendarUrl,
-    }));
-}
-
-async function fetchWithConcurrency(tasks, limit = 4) {
-  const results = [];
-  const executing = new Set();
-  for (const task of tasks) {
-    const p = task().then(r => { executing.delete(p); return r; });
-    executing.add(p);
-    results.push(p);
-    if (executing.size >= limit) await Promise.race(executing);
-  }
-  return Promise.allSettled(results);
-}
+// Calls our Netlify serverless function which handles:
+//   Tier 1: SeatGeek API for major venues
+//   Tier 2: Claude + web search for indie venues
+// API keys are stored securely in Netlify environment variables
 
 async function fetchShows() {
   if (isLoading) return;
@@ -756,55 +675,61 @@ async function fetchShows() {
   const btn = document.getElementById('fetchBtn');
   btn.disabled = true;
   btn.innerHTML = '&#9654; SCANNING...';
-  setStatus('loading', 'Scanning venue websites for real shows...');
-  initProgress();
+  setStatus('loading', 'Fetching live show data from venues...');
 
-  allEvents = [];
-  let totalFound = 0;
+  // Show simple progress (we don't get per-venue updates from the single API call)
+  const progressWrap = document.getElementById('progressWrap');
+  progressWrap.classList.add('visible');
+  document.getElementById('progressFill').style.width = '30%';
+  document.getElementById('progressVenues').innerHTML =
+    '<span class="progress-venue loading">SEATGEEK (TIER 1)</span>' +
+    '<span class="progress-venue loading">CLAUDE + WEB SEARCH (TIER 2)</span>';
 
-  const venueEntries = Object.entries(VENUES);
-  const tasks = venueEntries.map(([venueId, venue]) => {
-    return async () => {
-      updateProgress(venueId, 'loading', 0);
-      try {
-        const events = await fetchVenueEvents(venueId, venue);
-        updateProgress(venueId, 'done', events.length);
-        totalFound += events.length;
-        allEvents = [...allEvents, ...events];
-        setStatus('loading', `Found ${totalFound} shows so far...`);
-        renderCalendar();
-        return events;
-      } catch (err) {
-        console.error(`Error fetching ${venue.name}:`, err);
-        updateProgress(venueId, 'err', 0);
-        return [];
-      }
-    };
-  });
+  try {
+    const response = await fetch('/api/events');
 
-  await fetchWithConcurrency(tasks, 4);
+    document.getElementById('progressFill').style.width = '80%';
 
-  // Deduplicate
-  const seen = new Set();
-  allEvents = allEvents.filter(e => {
-    const key = `${e.title.toLowerCase().trim()}|${e.date}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-  allEvents.sort((a, b) => new Date(a.date) - new Date(b.date));
+    if (!response.ok) {
+      throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+    }
 
-  if (allEvents.length > 0) {
-    setStatus('done', `Loaded ${allEvents.length} real upcoming shows from venue websites`);
-    lastFetchTime = new Date();
-    saveToCache(allEvents);
-    updateCacheBadge(0, true);
-  } else {
-    setStatus('err', 'No shows found — venues may not have current listings');
+    const data = await response.json();
+
+    document.getElementById('progressFill').style.width = '100%';
+
+    if (data.events && data.events.length > 0) {
+      allEvents = data.events;
+      saveToCache(allEvents);
+      updateCacheBadge(0, true);
+
+      // Update progress indicators
+      const meta = data.meta || {};
+      const r = meta.results || {};
+      const t1 = r.tier1 || {};
+      const t2 = r.tier2 || {};
+      document.getElementById('progressVenues').innerHTML =
+        `<span class="progress-venue done">SEATGEEK: ${t1.success || 0} venues</span>` +
+        `<span class="progress-venue done">CLAUDE: ${t2.success || 0} venues</span>` +
+        (t1.failed || t2.failed ? `<span class="progress-venue err">${(t1.failed || 0) + (t2.failed || 0)} failed</span>` : '');
+
+      setStatus('done', `Loaded ${allEvents.length} real upcoming shows`);
+    } else {
+      setStatus('err', 'No shows found — venues may not have current listings');
+    }
+
+    renderCalendar();
+  } catch (err) {
+    console.error('Fetch error:', err);
+    setStatus('err', `Could not load shows — ${err.message}`);
+    document.getElementById('progressVenues').innerHTML =
+      '<span class="progress-venue err">FETCH FAILED</span>';
   }
 
-  hideProgress();
-  renderCalendar();
+  setTimeout(() => {
+    document.getElementById('progressWrap').classList.remove('visible');
+  }, 2000);
+
   isLoading = false;
   btn.disabled = false;
   btn.innerHTML = '&#9654; LOAD SHOWS';
