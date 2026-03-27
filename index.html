@@ -830,6 +830,9 @@ function renderGrid(year, month, filtered, today) {
   });
 
   let cells = '';
+  // Store events by date for the "more" click handler
+  window._eventsByDate = {};
+  
   for (let i = 0; i < firstDay; i++) {
     const d = daysInPrev - firstDay + i + 1;
     cells += `<div class="cal-cell other-month"><div class="day-num">${d}</div></div>`;
@@ -837,6 +840,7 @@ function renderGrid(year, month, filtered, today) {
   for (let d = 1; d <= daysInMonth; d++) {
     const isToday = d === today.getDate() && month === today.getMonth() && year === today.getFullYear();
     const events = byDate[d] || [];
+    window._eventsByDate[d] = events;
     const shown = events.slice(0, 2);
     const extra = events.length - shown.length;
 
@@ -844,7 +848,7 @@ function renderGrid(year, month, filtered, today) {
       const v = VENUES[e.venueId];
       return `<div class="event-dot ${v.color}" onclick="openModal(${JSON.stringify(e).split('"').join('&quot;')})" title="${e.title}">${e.title}</div>`;
     }).join('');
-    const moreHtml = extra > 0 ? `<div class="more-events">+${extra} more</div>` : '';
+    const moreHtml = extra > 0 ? `<div class="more-events" onclick="showDayEvents(${d})">+${extra} more</div>` : '';
 
     cells += `<div class="cal-cell${isToday ? ' today' : ''}">
       <div class="day-num">${d}</div>
@@ -892,6 +896,38 @@ function renderList(filtered) {
   }).join('');
 }
 
+// ---- SHOW ALL EVENTS FOR A DAY ----
+function showDayEvents(day) {
+  const events = window._eventsByDate[day] || [];
+  if (!events.length) return;
+  
+  // Switch to list view filtered to just this day
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+  const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+  
+  // Temporarily show a modal-like list of all events for this day
+  const v_list = events.map(e => {
+    const v = VENUES[e.venueId];
+    return `<div class="list-event" style="margin-bottom:4px" onclick="closeModal();openModal(${JSON.stringify(e).split('"').join('&quot;')})">
+      <div class="list-event-body">
+        <div class="list-event-venue" style="color:var(--${v.color})">${v.name.toUpperCase()}</div>
+        <div class="list-event-title">${e.title}</div>
+        <div class="list-event-meta">${e.time} &nbsp;&bull;&nbsp; ${e.price} &nbsp;&bull;&nbsp; ${e.genre}</div>
+      </div>
+    </div>`;
+  }).join('');
+  
+  const dayName = new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', {weekday:'long', month:'long', day:'numeric'});
+  
+  document.getElementById('mVenue').textContent = dayName.toUpperCase();
+  document.getElementById('mTitle').textContent = `${events.length} Shows`;
+  document.getElementById('mMeta').innerHTML = v_list;
+  document.getElementById('mDesc').textContent = '';
+  document.getElementById('mCta').style.display = 'none';
+  document.getElementById('modalBg').classList.add('open');
+}
+
 // ---- MODAL ----
 function openModal(e) {
   if (typeof e === 'string') e = JSON.parse(e.split('&quot;').join('"'));
@@ -916,6 +952,7 @@ function openModal(e) {
     ${sourceHtml}`;
   document.getElementById('mDesc').textContent = e.description;
   document.getElementById('mCta').href = e.ticketUrl;
+  document.getElementById('mCta').style.display = 'inline-block';
   document.getElementById('modalBg').classList.add('open');
 }
 

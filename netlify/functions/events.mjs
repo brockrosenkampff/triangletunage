@@ -169,18 +169,27 @@ async function fetchSeatGeekVenue(venueId, venue, clientId) {
   if (!eventsData.events || eventsData.events.length === 0) return [];
 
   // Filter to music events only
-  const musicTypes = ['concert', 'music_festival', 'band'];
+  const excludeTypes = ['sports', 'nhl', 'nba', 'nfl', 'mlb', 'mls', 'ncaa', 'hockey', 'basketball', 'football', 'baseball', 'soccer', 'comedy', 'theater', 'theatre', 'family', 'circus', 'wrestling', 'boxing', 'mma', 'monster_truck'];
   
   return eventsData.events
     .filter(e => {
       const type = (e.type || '').toLowerCase();
+      const title = (e.title || '').toLowerCase();
       const taxonomy = (e.taxonomies || []).map(t => t.name.toLowerCase());
-      // Include if it's a concert/music type, or if taxonomy includes concert/music
-      return type.includes('concert') || 
+      const allTaxStr = taxonomy.join(' ');
+      
+      // Exclude if any taxonomy or type matches sports/non-music
+      const isExcluded = excludeTypes.some(ex => 
+        type.includes(ex) || allTaxStr.includes(ex) || title.includes(' at hurricanes') || title.includes(' vs ')
+      );
+      if (isExcluded) return false;
+      
+      // Include if it's clearly a concert/music event
+      const isMusic = type.includes('concert') || 
              type.includes('music') ||
-             taxonomy.some(t => t.includes('concert') || t.includes('music')) ||
-             // Also include if no clear type (benefit of the doubt)
-             (!type.includes('comedy') && !type.includes('theater') && !type.includes('sport'));
+             taxonomy.some(t => t.includes('concert') || t.includes('music'));
+      
+      return isMusic;
     })
     .map(e => {
       const dt = new Date(e.datetime_utc + 'Z');
