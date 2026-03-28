@@ -136,7 +136,7 @@ const VENUES = {
 async function fetchSeatGeekVenue(venueId, venue, clientId) {
   const today = new Date().toISOString().split('T')[0];
   const future = new Date();
-  future.setMonth(future.getMonth() + 2);
+  future.setMonth(future.getMonth() + 6);
   const futureStr = future.toISOString().split('T')[0];
 
   // First, search for the venue to get its SeatGeek ID
@@ -241,7 +241,7 @@ async function fetchSeatGeekVenue(venueId, venue, clientId) {
 async function fetchClaudeVenue(venueId, venue, apiKey) {
   const today = new Date().toISOString().split('T')[0];
   const future = new Date();
-  future.setMonth(future.getMonth() + 2);
+  future.setMonth(future.getMonth() + 6);
   const futureStr = future.toISOString().split('T')[0];
 
   const prompt = `Search for upcoming concerts and live music events at ${venue.name} in ${venue.city}, NC. The venue's calendar/website is: ${venue.calendarUrl}
