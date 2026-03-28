@@ -243,15 +243,24 @@ async function fetchClaudeVenue(venueId, venue, apiKey) {
   const future = new Date();
   future.setMonth(future.getMonth() + 6);
   const futureStr = future.toISOString().split('T')[0];
+  const currentYear = new Date().getFullYear();
 
-  const prompt = `Search for upcoming concerts and live music events at ${venue.name} in ${venue.city}, NC. The venue's calendar/website is: ${venue.calendarUrl}
+  const prompt = `You are a live music researcher. Search thoroughly for upcoming concerts and live music events at ${venue.name} in ${venue.city}, NC.
 
-Search their website and any event listings to find REAL, CONFIRMED upcoming music events from ${today} through ${futureStr}.
+Do MULTIPLE searches to find events:
+1. Search "${venue.name} ${venue.city} upcoming concerts 2026" for their main calendar
+2. Search "${venue.name} schedule summer fall 2026" for future announcements  
+3. Search "${venue.name} concerts announced ${currentYear}" for recently announced shows
+4. Check their website: ${venue.calendarUrl}
+
+Find ALL REAL, CONFIRMED or ANNOUNCED upcoming music events from ${today} through ${futureStr}. Include shows even if tickets aren't on sale yet — if a show has been announced or is on the schedule, include it.
 
 CRITICAL RULES:
 - Only return events you found in actual search results — do NOT invent or guess events
 - Only include music events (concerts, live bands, DJ sets, singer-songwriters)
 - Exclude comedy shows, ballet, plays, film screenings, fundraisers, private events
+- If tickets aren't on sale yet, set price to "TBA" 
+- If no specific time is listed, set time to "TBA"
 - If you cannot find any confirmed events, return an empty array []
 
 Return ONLY a valid JSON array (no markdown, no preamble). Each object must have:
@@ -259,7 +268,7 @@ Return ONLY a valid JSON array (no markdown, no preamble). Each object must have
   "venueId": "${venueId}",
   "title": "Artist/Show Name",
   "date": "YYYY-MM-DD",
-  "time": "8:00 PM",
+  "time": "8:00 PM" or "TBA",
   "doors": "7:00 PM" or null,
   "price": "$20" or "$20-$45" or "Free" or "TBA",
   "genre": "Indie Rock",
@@ -280,7 +289,7 @@ Return ONLY the raw JSON array. No explanation, no markdown fences.`;
     },
     body: JSON.stringify({
       model: 'claude-sonnet-4-20250514',
-      max_tokens: 4000,
+      max_tokens: 8000,
       tools: [{ type: 'web_search_20250305', name: 'web_search' }],
       messages: [{ role: 'user', content: prompt }],
     }),
