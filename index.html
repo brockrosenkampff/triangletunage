@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Triangle Tunage — Live Music in the Triangle</title>
+  <style>
+    /* ── Reset & Base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d0d0f;
+      --surface: #161619;
+      --surface2: #1e1e22;
+      --border: #2a2a2f;
+      --text: #f0f0f4;
+      --muted: #888894;
+      --purple: #a855f7;
+      --purple-dim: #7c3aed33;
+      --magenta: #ec4899;
+      --magenta-dim: #be185d33;
+      --amber: #f59e0b;
+      --amber-dim: #92400e33;
+      --green: #22c55e;
+      --radius: 10px;
+      --card-radius: 12px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+
+    /* ── Header ── */
+    header {
+      padding: 28px 20px 20px;
+      text-align: center;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      background: var(--bg);
+      z-index: 100;
+    }
+
+    .site-title {
+      font-size: clamp(1.4rem, 5vw, 2rem);
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, var(--purple), var(--magenta), var(--amber));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .site-sub {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 2px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    /* ── Filter bar ── */
+    #filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 14px 16px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 85px;
+      z-index: 90;
+      align-items: center;
+    }
+
+    .filter-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      white-space: nowrap;
+      margin-right: 2px;
+    }
+
+    .venue-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 11px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1.5px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      transition: all 0.15s ease;
+      white-space: nowrap;
+      user-select: none;
+    }
+
+    .venue-chip:hover {
+      border-color: currentColor;
+      color: var(--text);
+    }
+
+    .venue-chip.active {
+      color: var(--text);
+    }
+
+    .venue-chip[data-color="purple"].active  { background: var(--purple-dim);  border-color: var(--purple);  color: var(--purple); }
+    .venue-chip[data-color="magenta"].active { background: var(--magenta-dim); border-color: var(--magenta); color: var(--magenta); }
+    .venue-chip[data-color="amber"].active   { background: var(--amber-dim);   border-color: var(--amber);   color: var(--amber); }
+
+    .venue-chip .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .venue-chip[data-color="purple"] .dot  { background: var(--purple); }
+    .venue-chip[data-color="magenta"] .dot { background: var(--magenta); }
+    .venue-chip[data-color="amber"] .dot   { background: var(--amber); }
+
+    .chip-all {
+      border-color: var(--border);
+    }
+    .chip-all.active {
+      background: #ffffff18;
+      border-color: #ffffff55;
+      color: var(--text);
+    }
+
+    .clear-btn {
+      margin-left: auto;
+      font-size: 0.7rem;
+      color: var(--muted);
+      cursor: pointer;
+      background: none;
+      border: none;
+      padding: 4px 6px;
+      border-radius: 6px;
+      transition: color 0.15s;
+    }
+    .clear-btn:hover { color: var(--text); }
+    .clear-btn.hidden { display: none; }
+
+    /* ── Active filter banner ── */
+    #active-banner {
+      display: none;
+      padding: 8px 16px;
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+      font-size: 0.8rem;
+      color: var(--muted);
+      align-items: center;
+      gap: 8px;
+    }
+    #active-banner.visible { display: flex; }
+    #active-banner strong { color: var(--text); }
+    #active-banner button {
+      margin-left: auto;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 0.75rem;
+      padding: 2px 6px;
+      border-radius: 6px;
+    }
+    #active-banner button:hover { color: var(--text); }
+
+    /* ── Main layout ── */
+    main {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 20px 12px 60px;
+    }
+
+    /* ── Loading ── */
+    #loading {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--muted);
+    }
+    .spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid var(--border);
+      border-top-color: var(--purple);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Error ── */
+    #error {
+      display: none;
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--muted);
+    }
+
+    /* ── Date group ── */
+    .date-group { margin-bottom: 28px; }
+
+    .date-heading {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      padding: 6px 0 10px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+    }
+
+    .date-heading .weekday {
+      font-size: 0.85rem;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: 0;
+      text-transform: none;
+    }
+
+    .date-heading .count-badge {
+      margin-left: auto;
+      font-size: 0.65rem;
+      background: var(--surface2);
+      border-radius: 999px;
+      padding: 1px 7px;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    /* ── Event card ── */
+    .event-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--card-radius);
+      padding: 14px 16px;
+      margin-bottom: 8px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px 12px;
+      align-items: start;
+      transition: border-color 0.15s, background 0.15s;
+      text-decoration: none;
+      color: inherit;
+      position: relative;
+    }
+
+    .event-card:hover {
+      border-color: #44444f;
+      background: var(--surface2);
+    }
+
+    .event-card::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 3px;
+      height: 60%;
+      border-radius: 0 3px 3px 0;
+    }
+
+    .event-card[data-color="purple"]::before  { background: var(--purple); }
+    .event-card[data-color="magenta"]::before { background: var(--magenta); }
+    .event-card[data-color="amber"]::before   { background: var(--amber); }
+
+    .event-left { min-width: 0; }
+
+    .event-title {
+      font-size: 0.975rem;
+      font-weight: 700;
+      line-height: 1.3;
+      color: var(--text);
+      margin-bottom: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .event-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 12px;
+      align-items: center;
+    }
+
+    .venue-tag {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+      padding: 2px 0;
+    }
+    .venue-tag:hover { text-decoration: underline; }
+
+    .event-card[data-color="purple"]  .venue-tag { color: var(--purple); }
+    .event-card[data-color="magenta"] .venue-tag { color: var(--magenta); }
+    .event-card[data-color="amber"]   .venue-tag { color: var(--amber); }
+
+    .meta-pill {
+      font-size: 0.7rem;
+      color: var(--muted);
+    }
+
+    .event-right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .price-badge {
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 3px 9px;
+      border-radius: 999px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    .ticket-link {
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 8px;
+      text-decoration: none;
+      white-space: nowrap;
+      display: inline-block;
+      transition: opacity 0.15s;
+    }
+    .ticket-link:hover { opacity: 0.8; }
+
+    .event-card[data-color="purple"]  .ticket-link { background: var(--purple-dim);  color: var(--purple); }
+    .event-card[data-color="magenta"] .ticket-link { background: var(--magenta-dim); color: var(--magenta); }
+    .event-card[data-color="amber"]   .ticket-link { background: var(--amber-dim);   color: var(--amber); }
+
+    /* ── Empty state ── */
+    #empty {
+      display: none;
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--muted);
+    }
+    #empty h3 { font-size: 1.1rem; color: var(--text); margin-bottom: 8px; }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center;
+      padding: 24px 20px;
+      font-size: 0.72rem;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+    }
+
+    /* ── Mobile tweaks ── */
+    @media (max-width: 500px) {
+      header { padding: 18px 16px 14px; }
+      #filter-bar { top: 72px; padding: 10px 12px; gap: 6px; }
+      .venue-chip { font-size: 0.7rem; padding: 4px 9px; }
+      .event-card { padding: 12px 12px 12px 16px; }
+      .event-title { font-size: 0.9rem; }
+      .ticket-link { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="site-title">Triangle Tunage</div>
+  <div class="site-sub">Live Music · Durham · Raleigh · Chapel Hill</div>
+</header>
+
+<!-- Venue filter chips -->
+<div id="filter-bar">
+  <span class="filter-label">Venues</span>
+  <button class="venue-chip chip-all active" data-venue="all">All shows</button>
+  <!-- chips injected by JS -->
+  <button class="clear-btn hidden" id="clear-filter">✕ Clear</button>
+</div>
+
+<!-- Active filter banner -->
+<div id="active-banner">
+  <span>Showing <strong id="banner-venue-name"></strong></span>
+  <span id="banner-count"></span>
+  <button onclick="clearFilter()">Show all venues</button>
+</div>
+
+<main>
+  <div id="loading">
+    <div class="spinner"></div>
+    <p>Loading shows…</p>
+  </div>
+  <div id="error">
+    <p>Couldn't load shows right now. Try refreshing.</p>
+  </div>
+  <div id="empty">
+    <h3>No shows found</h3>
+    <p>Try a different venue or check back soon.</p>
+  </div>
+  <div id="events-container"></div>
+</main>
+
+<footer>
+  Updated daily · Data from SeatGeek &amp; venue sites · <a href="#" style="color:inherit">triangletunage.com</a>
+</footer>
+
+<script>
+// ── Venue config (mirrors the backend) ──
+const VENUES = {
+  motorco:     { name: 'Motorco Music Hall',         city: 'Durham',     color: 'purple' },
+  pourhouse:   { name: 'The Raleigh Pourhouse',       city: 'Raleigh',    color: 'magenta' },
+  bowstring:   { name: 'Bowstring Brewyard',          city: 'Raleigh',    color: 'amber' },
+  stanczyk:    { name: "Stanczyk's",                  city: 'Durham',     color: 'purple' },
+  redhat:      { name: 'Red Hat Amphitheater',        city: 'Raleigh',    color: 'magenta' },
+  koka:        { name: 'Koka Booth Amphitheatre',     city: 'Cary',       color: 'amber' },
+  dpac:        { name: 'DPAC',                        city: 'Durham',     color: 'purple' },
+  catscradle:  { name: "Cat's Cradle",                city: 'Carrboro',   color: 'magenta' },
+  carolina:    { name: 'Carolina Theatre',            city: 'Durham',     color: 'amber' },
+  lincoln:     { name: 'Lincoln Theatre',             city: 'Raleigh',    color: 'magenta' },
+  ritz:        { name: 'The Ritz',                    city: 'Raleigh',    color: 'magenta' },
+  fruit:       { name: 'The Fruit',                   city: 'Durham',     color: 'purple' },
+  local506:    { name: 'Local 506',                   city: 'Chapel Hill',color: 'amber' },
+  walnutcreek: { name: 'Walnut Creek Amphitheatre',   city: 'Raleigh',    color: 'magenta' },
+  lenovo:      { name: 'Lenovo Center',               city: 'Raleigh',    color: 'amber' },
+  hawriver:    { name: 'Haw River Ballroom',          city: 'Saxapahaw',  color: 'amber' },
+  pinhook:     { name: 'The Pinhook',                 city: 'Durham',     color: 'purple' },
+  kings:       { name: 'Kings',                       city: 'Raleigh',    color: 'magenta' },
+};
+
+// ── State ──
+let allEvents = [];
+let activeVenue = 'all'; // 'all' or a venueId string
+
+// ── Format helpers ──
+function formatDate(dateStr) {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const date = new Date(y, m - 1, d);
+  const weekdays = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const months   = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return {
+    weekday: weekdays[date.getDay()],
+    full: `${months[m-1]} ${d}`,
+    short: `${months[m-1]} ${d}, ${y}`,
+  };
+}
+
+function isToday(dateStr) {
+  const today = new Date();
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return today.getFullYear() === y && today.getMonth() + 1 === m && today.getDate() === d;
+}
+
+function isTomorrow(dateStr) {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return tomorrow.getFullYear() === y && tomorrow.getMonth() + 1 === m && tomorrow.getDate() === d;
+}
+
+// ── Build venue filter chips ──
+function buildChips(venuesWithEvents) {
+  const bar = document.getElementById('filter-bar');
+  // Remove existing venue chips (not "all" or the clear button)
+  bar.querySelectorAll('.venue-chip:not(.chip-all)').forEach(c => c.remove());
+
+  const clearBtn = document.getElementById('clear-filter');
+
+  venuesWithEvents.forEach(venueId => {
+    const venue = VENUES[venueId];
+    if (!venue) return;
+    const btn = document.createElement('button');
+    btn.className = 'venue-chip';
+    btn.dataset.venue = venueId;
+    btn.dataset.color = venue.color;
+    btn.innerHTML = `<span class="dot"></span>${venue.name}`;
+    btn.addEventListener('click', () => setFilter(venueId));
+    // Insert before clear button
+    bar.insertBefore(btn, clearBtn);
+  });
+}
+
+// ── Filter logic ──
+function setFilter(venueId) {
+  activeVenue = venueId;
+
+  // Update chip styles
+  document.querySelectorAll('.venue-chip').forEach(chip => {
+    chip.classList.toggle('active', chip.dataset.venue === venueId);
+  });
+
+  // Show/hide clear button
+  const clearBtn = document.getElementById('clear-filter');
+  clearBtn.classList.toggle('hidden', venueId === 'all');
+
+  // Update banner
+  const banner = document.getElementById('active-banner');
+  if (venueId !== 'all') {
+    const venue = VENUES[venueId];
+    const filtered = allEvents.filter(e => e.venueId === venueId);
+    document.getElementById('banner-venue-name').textContent = venue ? venue.name : venueId;
+    document.getElementById('banner-count').textContent =
+      `· ${filtered.length} show${filtered.length !== 1 ? 's' : ''}`;
+    banner.classList.add('visible');
+  } else {
+    banner.classList.remove('visible');
+  }
+
+  renderEvents();
+
+  // Scroll back to top of content smoothly
+  document.getElementById('events-container').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function clearFilter() {
+  setFilter('all');
+}
+
+// ── Render events ──
+function renderEvents() {
+  const container = document.getElementById('events-container');
+  const emptyEl = document.getElementById('empty');
+  container.innerHTML = '';
+
+  const filtered = activeVenue === 'all'
+    ? allEvents
+    : allEvents.filter(e => e.venueId === activeVenue);
+
+  if (filtered.length === 0) {
+    emptyEl.style.display = 'block';
+    return;
+  }
+  emptyEl.style.display = 'none';
+
+  // Group by date
+  const groups = {};
+  filtered.forEach(event => {
+    if (!groups[event.date]) groups[event.date] = [];
+    groups[event.date].push(event);
+  });
+
+  Object.keys(groups).sort().forEach(dateStr => {
+    const events = groups[dateStr];
+    const { weekday, full } = formatDate(dateStr);
+
+    const group = document.createElement('div');
+    group.className = 'date-group';
+
+    const heading = document.createElement('div');
+    heading.className = 'date-heading';
+
+    let label = full;
+    if (isToday(dateStr))    label = 'Today';
+    if (isTomorrow(dateStr)) label = 'Tomorrow';
+
+    heading.innerHTML = `
+      <span class="weekday">${label === 'Today' || label === 'Tomorrow' ? label : weekday}</span>
+      ${label !== 'Today' && label !== 'Tomorrow' ? `<span>${full}</span>` : ''}
+      <span class="count-badge">${events.length} show${events.length !== 1 ? 's' : ''}</span>
+    `;
+    group.appendChild(heading);
+
+    events.forEach(event => {
+      const venue = VENUES[event.venueId];
+      const color = venue ? venue.color : 'purple';
+      const venueName = venue ? venue.name : event.venueId;
+
+      const card = document.createElement('div');
+      card.className = 'event-card';
+      card.dataset.color = color;
+      card.dataset.venueId = event.venueId;
+
+      const time = event.time && event.time !== 'TBA' ? event.time : '';
+      const doors = event.doors ? `Doors ${event.doors}` : '';
+
+      card.innerHTML = `
+        <div class="event-left">
+          <div class="event-title">${escHtml(event.title)}</div>
+          <div class="event-meta">
+            <span class="venue-tag" data-venue="${escHtml(event.venueId)}">${escHtml(venueName)}</span>
+            ${time ? `<span class="meta-pill">🕐 ${escHtml(time)}</span>` : ''}
+            ${doors ? `<span class="meta-pill">${escHtml(doors)}</span>` : ''}
+            ${event.genre && event.genre !== 'Live Music' ? `<span class="meta-pill">${escHtml(event.genre)}</span>` : ''}
+          </div>
+        </div>
+        <div class="event-right">
+          <span class="price-badge">${escHtml(event.price || 'TBA')}</span>
+          ${event.ticketUrl ? `<a class="ticket-link" href="${escHtml(event.ticketUrl)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Tickets →</a>` : ''}
+        </div>
+      `;
+
+      // Clicking the venue tag filters to that venue
+      card.querySelector('.venue-tag').addEventListener('click', (e) => {
+        e.stopPropagation();
+        setFilter(event.venueId);
+      });
+
+      // Clicking the card opens tickets (if URL exists)
+      if (event.ticketUrl) {
+        card.style.cursor = 'pointer';
+        card.addEventListener('click', () => {
+          window.open(event.ticketUrl, '_blank', 'noopener');
+        });
+      }
+
+      group.appendChild(card);
+    });
+
+    container.appendChild(group);
+  });
+}
+
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// ── Load events ──
+async function loadEvents() {
+  try {
+    const res = await fetch('/api/events');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    allEvents = data.events || [];
+
+    // Hide loading
+    document.getElementById('loading').style.display = 'none';
+
+    if (allEvents.length === 0) {
+      document.getElementById('empty').style.display = 'block';
+      return;
+    }
+
+    // Find which venues actually have events, in the order they appear
+    const seen = new Set();
+    const venuesWithEvents = [];
+    allEvents.forEach(e => {
+      if (!seen.has(e.venueId)) {
+        seen.add(e.venueId);
+        venuesWithEvents.push(e.venueId);
+      }
+    });
+
+    buildChips(venuesWithEvents);
+    renderEvents();
+
+  } catch (err) {
+    console.error('Failed to load events:', err);
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('error').style.display = 'block';
+  }
+}
+
+loadEvents();
+</script>
+</body>
+</html>
