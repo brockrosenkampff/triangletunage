@@ -189,12 +189,8 @@ async function fetchSeatGeekVenue(venueId, venue, clientId) {
       if (title.includes(' vs ') || title.includes(' vs. ')) return false;
       if (title.includes(' at ') && sportsTeams.some(team => title.includes(team))) return false;
 
-      // Include if it's clearly a concert/music event
-      const isMusic = type.includes('concert') ||
-             type.includes('music') ||
-             taxonomy.some(t => t.includes('concert') || t.includes('music'));
-
-      return isMusic;
+      // These are all known music venues — include everything not excluded above
+      return true;
     })
     .map(e => {
       const dt = new Date(e.datetime_utc + 'Z');
