@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Triangle Tunage — Live Music in the Triangle</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
   <style>
     /* ── Reset & Base ── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -36,10 +38,12 @@
       line-height: 1.5;
     }
 
-    /* ── Header ── */
+    /* ── Header bar (sticky nav) ── */
     header {
-      padding: 28px 20px 20px;
-      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 24px;
       border-bottom: 1px solid var(--border);
       position: sticky;
       top: 0;
@@ -47,22 +51,79 @@
       z-index: 100;
     }
 
-    .site-title {
-      font-size: clamp(1.4rem, 5vw, 2rem);
-      font-weight: 800;
-      letter-spacing: -0.5px;
-      background: linear-gradient(135deg, var(--purple), var(--magenta), var(--amber));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
+    .header-logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
     }
 
-    .site-sub {
-      font-size: 0.8rem;
+    .header-logo svg { flex-shrink: 0; }
+
+    .wordmark {
+      display: flex;
+      flex-direction: column;
+      line-height: 1;
+    }
+
+    .wordmark-top {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-weight: 900;
+      font-size: 1.15rem;
+      letter-spacing: 4px;
+      color: #f5f0e8;
+    }
+
+    .wordmark-bottom {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-weight: 700;
+      font-style: italic;
+      font-size: 0.7rem;
+      letter-spacing: 3px;
+      color: #c93b7a;
+      margin-top: 3px;
+    }
+
+    .header-tagline {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.6rem;
+      letter-spacing: 4px;
       color: var(--muted);
-      margin-top: 2px;
-      letter-spacing: 0.08em;
       text-transform: uppercase;
+    }
+
+    /* ── Hero section ── */
+    .hero-section {
+      text-align: center;
+      padding: 56px 24px 48px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .hero-headline {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-weight: 900;
+      font-size: clamp(3rem, 10vw, 5.5rem);
+      color: #f5f0e8;
+      line-height: 1;
+      letter-spacing: -1px;
+    }
+
+    .hero-subline {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-weight: 700;
+      font-style: italic;
+      font-size: clamp(2.8rem, 9vw, 5rem);
+      color: #c93b7a;
+      line-height: 1.1;
+    }
+
+    .hero-cities {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.7rem;
+      letter-spacing: 5px;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-top: 20px;
     }
 
     /* ── Filter bar ── */
@@ -74,7 +135,7 @@
       background: var(--surface);
       border-bottom: 1px solid var(--border);
       position: sticky;
-      top: 85px;
+      top: 62px;
       z-index: 90;
       align-items: center;
     }
@@ -373,23 +434,206 @@
       border-top: 1px solid var(--border);
     }
 
+    /* ── View toggle bar ── */
+    #view-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+      padding: 12px 20px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .month-nav {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .month-nav-btn {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: background 0.15s;
+    }
+    .month-nav-btn:hover { background: var(--border); }
+
+    .month-label {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: var(--text);
+      min-width: 140px;
+      text-align: center;
+    }
+
+    .show-count-label {
+      font-size: 0.72rem;
+      letter-spacing: 2px;
+      color: var(--muted);
+      text-transform: uppercase;
+      font-family: 'Space Mono', monospace;
+    }
+
+    .view-btns {
+      display: flex;
+      gap: 6px;
+    }
+
+    .view-btn {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--muted);
+      font-size: 0.72rem;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 5px 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-family: 'Space Mono', monospace;
+    }
+    .view-btn.active {
+      background: var(--text);
+      color: var(--bg);
+      border-color: var(--text);
+      font-weight: 700;
+    }
+
+    /* ── Calendar grid ── */
+    #cal-wrap {
+      padding: 16px 16px 32px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .cal-dow-row {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 4px;
+      margin-bottom: 4px;
+    }
+
+    .cal-dow {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.6rem;
+      letter-spacing: 2px;
+      color: var(--muted);
+      text-align: center;
+      padding: 4px 0;
+      text-transform: uppercase;
+    }
+
+    .cal-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 4px;
+    }
+
+    .cal-day {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      min-height: 90px;
+      padding: 6px;
+      cursor: default;
+      transition: border-color 0.15s;
+    }
+
+    .cal-day.other-month { opacity: 0.35; }
+
+    .cal-day.today {
+      border-color: var(--magenta);
+      box-shadow: 0 0 0 1px var(--magenta-dim);
+    }
+
+    .cal-day-num {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .cal-day.today .cal-day-num { color: var(--magenta); }
+
+    .cal-event-pill {
+      display: block;
+      font-size: 0.65rem;
+      line-height: 1.3;
+      padding: 2px 5px;
+      border-radius: 4px;
+      margin-bottom: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      cursor: pointer;
+      border-left: 3px solid transparent;
+      background: var(--surface2);
+      color: var(--text);
+      text-decoration: none;
+      transition: opacity 0.12s;
+    }
+    .cal-event-pill:hover { opacity: 0.8; }
+
+    .cal-event-pill[data-color="purple"]  { border-left-color: var(--purple); }
+    .cal-event-pill[data-color="magenta"] { border-left-color: var(--magenta); }
+    .cal-event-pill[data-color="amber"]   { border-left-color: var(--amber); }
+
     /* ── Mobile tweaks ── */
     @media (max-width: 500px) {
-      header { padding: 18px 16px 14px; }
-      #filter-bar { top: 72px; padding: 10px 12px; gap: 6px; }
+      header { padding: 10px 14px; }
+      .hero-section { padding: 32px 16px 28px; }
+      #filter-bar { top: 58px; padding: 10px 12px; gap: 6px; }
       .venue-chip { font-size: 0.7rem; padding: 4px 9px; }
       .event-card { padding: 12px 12px 12px 16px; }
       .event-title { font-size: 0.9rem; }
       .ticket-link { display: none; }
+      .cal-day { min-height: 60px; }
+      .cal-event-pill { font-size: 0.6rem; }
+      .header-tagline { display: none; }
     }
   </style>
 </head>
 <body>
 
 <header>
-  <div class="site-title">Triangle Tunage</div>
-  <div class="site-sub">Live Music · Durham · Raleigh · Chapel Hill</div>
+  <a class="header-logo" href="/">
+    <svg width="40" height="40" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="60" cy="60" r="56" fill="none" stroke="#8b2fc9" stroke-width="0.6" opacity="0.3"/>
+      <circle cx="60" cy="60" r="52" fill="#110f1c"/>
+      <polygon points="60,10 108,92 12,92" fill="none" stroke="#f5f0e8" stroke-width="2" opacity="0.9"/>
+      <polygon points="60,24 98,86 22,86" fill="none" stroke="#8b2fc9" stroke-width="1.2" opacity="0.65"/>
+      <polygon points="60,38 88,80 32,80" fill="none" stroke="#c93b7a" stroke-width="1" opacity="0.6"/>
+      <polygon points="60,50 78,74 42,74" fill="#c93b7a" opacity="0.12"/>
+      <path d="M30,58 Q37,53 44,58 Q51,63 58,58 Q65,53 72,58 Q79,63 86,58 Q91,54 90,58" fill="none" stroke="#e8a020" stroke-width="1.6" opacity="0.8"/>
+      <path d="M32,68 Q39,63 46,68 Q53,73 60,68 Q67,63 74,68 Q81,73 88,68" fill="none" stroke="#c93b7a" stroke-width="1" opacity="0.5"/>
+      <circle cx="60" cy="60" r="5" fill="#e8a020" opacity="0.95"/>
+      <circle cx="60" cy="60" r="2" fill="#0d0b14"/>
+    </svg>
+    <div class="wordmark">
+      <span class="wordmark-top">TRIANGLE</span>
+      <span class="wordmark-bottom">tunage</span>
+    </div>
+  </a>
+  <span class="header-tagline">Your Triangle, Live</span>
 </header>
+
+<!-- Hero -->
+<div class="hero-section">
+  <div class="hero-headline">Live Music.</div>
+  <div class="hero-subline">Your Triangle.</div>
+  <div class="hero-cities">Raleigh &nbsp;·&nbsp; Durham &nbsp;·&nbsp; Chapel Hill</div>
+</div>
 
 <!-- Venue filter chips -->
 <div id="filter-bar">
@@ -406,6 +650,20 @@
   <button onclick="clearFilter()">Show all venues</button>
 </div>
 
+<!-- View controls -->
+<div id="view-bar">
+  <div class="month-nav">
+    <button class="month-nav-btn" id="prev-month">&#8592;</button>
+    <span class="month-label" id="month-label">May 2026</span>
+    <button class="month-nav-btn" id="next-month">&#8594;</button>
+    <span class="show-count-label" id="show-count-label"></span>
+  </div>
+  <div class="view-btns">
+    <button class="view-btn active" id="btn-calendar" onclick="switchView('calendar')">Calendar</button>
+    <button class="view-btn" id="btn-list" onclick="switchView('list')">List</button>
+  </div>
+</div>
+
 <main>
   <div id="loading">
     <div class="spinner"></div>
@@ -418,6 +676,17 @@
     <h3>No shows found</h3>
     <p>Try a different venue or check back soon.</p>
   </div>
+  <!-- Calendar view -->
+  <div id="cal-wrap" style="display:none">
+    <div class="cal-dow-row">
+      <div class="cal-dow">Sun</div><div class="cal-dow">Mon</div>
+      <div class="cal-dow">Tue</div><div class="cal-dow">Wed</div>
+      <div class="cal-dow">Thu</div><div class="cal-dow">Fri</div>
+      <div class="cal-dow">Sat</div>
+    </div>
+    <div class="cal-grid" id="cal-grid"></div>
+  </div>
+  <!-- List view -->
   <div id="events-container"></div>
 </main>
 
@@ -451,6 +720,10 @@ const VENUES = {
 // ── State ──
 let allEvents = [];
 let activeVenue = 'all'; // 'all' or a venueId string
+let currentView = 'calendar';
+const today = new Date();
+let calYear  = today.getFullYear();
+let calMonth = today.getMonth(); // 0-indexed
 
 // ── Format helpers ──
 function formatDate(dateStr) {
@@ -526,10 +799,9 @@ function setFilter(venueId) {
     banner.classList.remove('visible');
   }
 
-  renderEvents();
+  if (currentView === 'calendar') renderCalendar();
+  else renderEvents();
 
-  // Scroll back to top of content smoothly
-  document.getElementById('events-container').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -639,6 +911,129 @@ function escHtml(str) {
     .replace(/"/g, '&quot;');
 }
 
+// ── View switching ──
+function switchView(view) {
+  currentView = view;
+  document.getElementById('btn-calendar').classList.toggle('active', view === 'calendar');
+  document.getElementById('btn-list').classList.toggle('active', view === 'list');
+  document.getElementById('cal-wrap').style.display  = view === 'calendar' ? 'block' : 'none';
+  document.getElementById('events-container').style.display = view === 'list' ? 'block' : 'none';
+
+  // Month nav only relevant for calendar view
+  document.getElementById('prev-month').style.visibility = view === 'calendar' ? 'visible' : 'hidden';
+  document.getElementById('next-month').style.visibility = view === 'calendar' ? 'visible' : 'hidden';
+  document.getElementById('month-label').style.visibility = view === 'calendar' ? 'visible' : 'hidden';
+
+  if (view === 'calendar') renderCalendar();
+  else renderEvents();
+}
+
+// ── Month navigation ──
+document.getElementById('prev-month').addEventListener('click', () => {
+  calMonth--;
+  if (calMonth < 0) { calMonth = 11; calYear--; }
+  renderCalendar();
+});
+document.getElementById('next-month').addEventListener('click', () => {
+  calMonth++;
+  if (calMonth > 11) { calMonth = 0; calYear++; }
+  renderCalendar();
+});
+
+// ── Calendar render ──
+function renderCalendar() {
+  const MONTH_NAMES = ['January','February','March','April','May','June',
+                       'July','August','September','October','November','December'];
+  document.getElementById('month-label').textContent = `${MONTH_NAMES[calMonth]} ${calYear}`;
+
+  const filtered = activeVenue === 'all'
+    ? allEvents
+    : allEvents.filter(e => e.venueId === activeVenue);
+
+  // Index events by date string "YYYY-MM-DD"
+  const byDate = {};
+  filtered.forEach(ev => {
+    if (!byDate[ev.date]) byDate[ev.date] = [];
+    byDate[ev.date].push(ev);
+  });
+
+  // Count shows this month
+  const monthPrefix = `${calYear}-${String(calMonth + 1).padStart(2, '0')}`;
+  const monthShows = filtered.filter(ev => ev.date && ev.date.startsWith(monthPrefix)).length;
+  document.getElementById('show-count-label').textContent =
+    monthShows > 0 ? `${monthShows} show${monthShows !== 1 ? 's' : ''}` : '';
+
+  const grid = document.getElementById('cal-grid');
+  grid.innerHTML = '';
+
+  const firstDay  = new Date(calYear, calMonth, 1).getDay(); // 0=Sun
+  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+  const daysInPrev  = new Date(calYear, calMonth, 0).getDate();
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+
+  // Fill leading blanks with prev-month days
+  for (let i = 0; i < firstDay; i++) {
+    const d = daysInPrev - firstDay + 1 + i;
+    const cell = makeCalDay(calYear, calMonth - 1, d, true, byDate, todayStr);
+    grid.appendChild(cell);
+  }
+  // Current month days
+  for (let d = 1; d <= daysInMonth; d++) {
+    const cell = makeCalDay(calYear, calMonth, d, false, byDate, todayStr);
+    grid.appendChild(cell);
+  }
+  // Fill trailing blanks
+  const total = firstDay + daysInMonth;
+  const trailing = total % 7 === 0 ? 0 : 7 - (total % 7);
+  for (let d = 1; d <= trailing; d++) {
+    const cell = makeCalDay(calYear, calMonth + 1, d, true, byDate, todayStr);
+    grid.appendChild(cell);
+  }
+}
+
+function makeCalDay(year, month, day, otherMonth, byDate, todayStr) {
+  // Normalize month overflow
+  let y = year, m = month;
+  if (m < 0)  { y--; m = 11; }
+  if (m > 11) { y++; m = 0; }
+  const dateStr = `${y}-${String(m + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
+  const cell = document.createElement('div');
+  cell.className = 'cal-day' + (otherMonth ? ' other-month' : '') + (dateStr === todayStr ? ' today' : '');
+
+  const num = document.createElement('div');
+  num.className = 'cal-day-num';
+  num.textContent = day;
+  cell.appendChild(num);
+
+  const events = byDate[dateStr] || [];
+  events.slice(0, 3).forEach(ev => {
+    const venue = VENUES[ev.venueId];
+    const color = venue ? venue.color : 'purple';
+    const pill = document.createElement('a');
+    pill.className = 'cal-event-pill';
+    pill.dataset.color = color;
+    pill.textContent = ev.title;
+    if (ev.ticketUrl) {
+      pill.href = ev.ticketUrl;
+      pill.target = '_blank';
+      pill.rel = 'noopener';
+    } else {
+      pill.href = '#';
+      pill.addEventListener('click', e => e.preventDefault());
+    }
+    cell.appendChild(pill);
+  });
+  if (events.length > 3) {
+    const more = document.createElement('div');
+    more.style.cssText = 'font-size:0.6rem;color:var(--muted);padding:1px 5px';
+    more.textContent = `+${events.length - 3} more`;
+    cell.appendChild(more);
+  }
+
+  return cell;
+}
+
 // ── Load events ──
 async function loadEvents() {
   try {
@@ -666,7 +1061,7 @@ async function loadEvents() {
     });
 
     buildChips(venuesWithEvents);
-    renderEvents();
+    switchView('calendar'); // default to calendar view
 
   } catch (err) {
     console.error('Failed to load events:', err);
