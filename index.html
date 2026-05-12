@@ -527,9 +527,9 @@
 
     /* ── Calendar grid ── */
     #cal-wrap {
-      padding: 16px 16px 32px;
-      max-width: 1100px;
-      margin: 0 auto;
+      padding: 16px 24px 32px;
+      width: 100%;
+      box-sizing: border-box;
     }
 
     .cal-dow-row {
@@ -537,6 +537,7 @@
       grid-template-columns: repeat(7, 1fr);
       gap: 4px;
       margin-bottom: 4px;
+      width: 100%;
     }
 
     .cal-dow {
@@ -570,6 +571,11 @@
     .cal-day.today {
       border-color: var(--magenta);
       box-shadow: 0 0 0 1px var(--magenta-dim);
+    }
+
+    .cal-day.has-events:hover {
+      border-color: #44444f;
+      background: var(--surface2);
     }
 
     .cal-day-num {
@@ -691,19 +697,20 @@
     <h3>No shows found</h3>
     <p>Try a different venue or check back soon.</p>
   </div>
-  <!-- Calendar view -->
-  <div id="cal-wrap" style="display:none">
-    <div class="cal-dow-row">
-      <div class="cal-dow">Sun</div><div class="cal-dow">Mon</div>
-      <div class="cal-dow">Tue</div><div class="cal-dow">Wed</div>
-      <div class="cal-dow">Thu</div><div class="cal-dow">Fri</div>
-      <div class="cal-dow">Sat</div>
-    </div>
-    <div class="cal-grid" id="cal-grid"></div>
-  </div>
   <!-- List view -->
   <div id="events-container"></div>
 </main>
+
+<!-- Calendar view — full-width, outside constrained main -->
+<div id="cal-wrap" style="display:none">
+  <div class="cal-dow-row">
+    <div class="cal-dow">Sun</div><div class="cal-dow">Mon</div>
+    <div class="cal-dow">Tue</div><div class="cal-dow">Wed</div>
+    <div class="cal-dow">Thu</div><div class="cal-dow">Fri</div>
+    <div class="cal-dow">Sat</div>
+  </div>
+  <div class="cal-grid" id="cal-grid"></div>
+</div>
 
 <footer>
   Updated daily · Data from SeatGeek &amp; venue sites · <a href="#" style="color:inherit">triangletunage.com</a>
@@ -853,6 +860,7 @@ function renderEvents() {
 
     const group = document.createElement('div');
     group.className = 'date-group';
+    group.dataset.date = dateStr;
 
     const heading = document.createElement('div');
     heading.className = 'date-heading';
@@ -1023,32 +1031,45 @@ function makeCalDay(year, month, day, otherMonth, byDate, todayStr) {
   cell.appendChild(num);
 
   const events = byDate[dateStr] || [];
+
+  // Days with shows are clickable — drill into list view for that date
+  if (events.length > 0 && !otherMonth) {
+    cell.classList.add('has-events');
+    cell.style.cursor = 'pointer';
+    cell.addEventListener('click', () => {
+      switchView('list');
+      setTimeout(() => scrollToDate(dateStr), 50);
+    });
+  }
+
   events.slice(0, 3).forEach(ev => {
     const venue = VENUES[ev.venueId];
     const color = venue ? venue.color : 'purple';
-    const pill = document.createElement('a');
+    const pill = document.createElement('div');
     pill.className = 'cal-event-pill';
     pill.dataset.color = color;
     pill.textContent = ev.title;
-    if (ev.ticketUrl) {
-      pill.href = ev.ticketUrl;
-      pill.target = '_blank';
-      pill.rel = 'noopener';
-    } else {
-      pill.href = '#';
-      pill.addEventListener('click', e => e.preventDefault());
-    }
     cell.appendChild(pill);
   });
   if (events.length > 3) {
     const more = document.createElement('button');
     more.style.cssText = 'font-size:0.6rem;color:var(--muted);padding:1px 5px;background:none;border:none;cursor:pointer;text-align:left;text-decoration:underline;text-underline-offset:2px;';
     more.textContent = `+${events.length - 3} more`;
-    more.addEventListener('click', (e) => { e.stopPropagation(); switchView('list'); });
+    more.addEventListener('click', (e) => {
+      e.stopPropagation();
+      switchView('list');
+      setTimeout(() => scrollToDate(dateStr), 50);
+    });
     cell.appendChild(more);
   }
 
   return cell;
+}
+
+// ── Scroll to date in list view ──
+function scrollToDate(dateStr) {
+  const target = document.querySelector(`[data-date="${dateStr}"]`);
+  if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 // ── Google Calendar helpers ──
