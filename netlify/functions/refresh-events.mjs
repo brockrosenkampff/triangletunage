@@ -1,9 +1,11 @@
 // ============================================================
-// TRIANGLETUNAGE — Netlify Serverless Function
+// TRIANGLETUNAGE — Daily Cache Refresh (Scheduled Function)
 // ============================================================
-// Serves events from Netlify Blobs cache (updated daily by
-// the refresh-events scheduled function). Falls back to a
-// live fetch only on first deploy before cache exists.
+// Runs once per day at 9am UTC (5am ET).
+// Fetches all events from SeatGeek + Claude and stores the
+// result in Netlify Blobs. The /api/events endpoint reads
+// from Blobs, so API credits are spent exactly once per day
+// regardless of how many people visit the site.
 //
 // Environment variables required:
 //   SEATGEEK_CLIENT_ID
@@ -138,17 +140,12 @@ async function fetchSeatGeekVenue(venueId, venue, clientId) {
   future.setMonth(future.getMonth() + 6);
   const futureStr = future.toISOString().split('T')[0];
 
-  // First, search for the venue to get its SeatGeek ID
   const searchUrl = `https://api.seatgeek.com/2/venues?slug=${venue.seatgeekSlug}&client_id=${clientId}`;
   const searchRes = await fetch(searchUrl);
-  if (!searchRes.ok) {
-    console.error(`SeatGeek venue search failed for ${venue.name}: ${searchRes.status}`);
-    return [];
-  }
+  if (!searchRes.ok) return [];
   const searchData = await searchRes.json();
 
   if (!searchData.venues || searchData.venues.length === 0) {
-    // Try a name-based search as fallback
     const nameSearchUrl = `https://api.seatgeek.com/2/venues?q=${encodeURIComponent(venue.name)}&city=${encodeURIComponent(venue.city)}&state=NC&client_id=${clientId}`;
     const nameRes = await fetch(nameSearchUrl);
     if (!nameRes.ok) return [];
@@ -158,19 +155,13 @@ async function fetchSeatGeekVenue(venueId, venue, clientId) {
   }
 
   const sgVenueId = searchData.venues[0].id;
-
-  // Now fetch events at this venue
   const eventsUrl = `https://api.seatgeek.com/2/events?venue.id=${sgVenueId}&datetime_utc.gte=${today}&datetime_utc.lte=${futureStr}&per_page=50&client_id=${clientId}`;
   const eventsRes = await fetch(eventsUrl);
   if (!eventsRes.ok) return [];
   const eventsData = await eventsRes.json();
-
   if (!eventsData.events || eventsData.events.length === 0) return [];
 
-  // Filter to music events only
   const excludeTypes = ['sports', 'nhl', 'nba', 'nfl', 'mlb', 'mls', 'ncaa', 'hockey', 'basketball', 'football', 'baseball', 'soccer', 'comedy', 'theater', 'theatre', 'family', 'circus', 'wrestling', 'boxing', 'mma', 'monster_truck'];
-
-  // Sports team names that appear in event titles
   const sportsTeams = ['hurricanes', 'canadiens', 'bruins', 'penguins', 'capitals', 'rangers', 'islanders', 'devils', 'flyers', 'blue jackets', 'maple leafs', 'senators', 'panthers', 'lightning', 'red wings', 'sabres', 'predators', 'blackhawks', 'wild', 'avalanche', 'stars', 'blues', 'jets', 'oilers', 'flames', 'canucks', 'kraken', 'golden knights', 'sharks', 'ducks', 'kings', 'coyotes', 'wolfpack', 'nc state', 'tar heels', 'duke', 'blue devils', 'demon deacons', 'hornets', 'bobcats', 'panthers'];
 
   return eventsData.events
@@ -179,18 +170,9 @@ async function fetchSeatGeekVenue(venueId, venue, clientId) {
       const title = (e.title || '').toLowerCase();
       const taxonomy = (e.taxonomies || []).map(t => t.name.toLowerCase());
       const allTaxStr = taxonomy.join(' ');
-
-      // Exclude if any taxonomy or type matches sports/non-music
-      const isExcludedType = excludeTypes.some(ex =>
-        type.includes(ex) || allTaxStr.includes(ex)
-      );
-      if (isExcludedType) return false;
-
-      // Exclude if title contains " at " or " vs " with sports team names
+      if (excludeTypes.some(ex => type.includes(ex) || allTaxStr.includes(ex))) return false;
       if (title.includes(' vs ') || title.includes(' vs. ')) return false;
       if (title.includes(' at ') && sportsTeams.some(team => title.includes(team))) return false;
-
-      // These are all known music venues — include everything not excluded above
       return true;
     })
     .map(e => {
@@ -199,35 +181,18 @@ async function fetchSeatGeekVenue(venueId, venue, clientId) {
       const localTime = e.datetime_local
         ? new Date(e.datetime_local).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
         : dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-
       const lowestPrice = e.stats?.lowest_price;
       const highestPrice = e.stats?.highest_price;
       let price = 'TBA';
-      if (lowestPrice && highestPrice && lowestPrice !== highestPrice) {
-        price = `$${lowestPrice}-$${highestPrice}`;
-      } else if (lowestPrice) {
-        price = `$${lowestPrice}`;
-      }
-
-      // Get genre from performers
-      const genres = (e.performers || [])
-        .flatMap(p => (p.genres || []).map(g => g.name))
-        .filter(Boolean);
-      const genre = genres[0] || 'Live Music';
-
+      if (lowestPrice && highestPrice && lowestPrice !== highestPrice) price = `$${lowestPrice}-$${highestPrice}`;
+      else if (lowestPrice) price = `$${lowestPrice}`;
+      const genres = (e.performers || []).flatMap(p => (p.genres || []).map(g => g.name)).filter(Boolean);
       return {
-        venueId,
-        title: e.short_title || e.title,
-        date: localDate,
-        time: localTime,
-        doors: null,
-        price,
-        genre,
+        venueId, title: e.short_title || e.title, date: localDate, time: localTime,
+        doors: null, price, genre: genres[0] || 'Live Music',
         description: e.description || `${e.short_title || e.title} at ${venue.name}`,
-        ticketUrl: e.url || venue.ticketBase,
-        isEtix: venue.isEtix,
-        source: e.url || `https://seatgeek.com`,
-        dataSource: 'seatgeek',
+        ticketUrl: e.url || venue.ticketBase, isEtix: venue.isEtix,
+        source: e.url || 'https://seatgeek.com', dataSource: 'seatgeek',
       };
     });
 }
@@ -249,7 +214,7 @@ Do MULTIPLE searches to find events:
 4. Search "site:bandsintown.com ${venue.name}" for Bandsintown listings
 5. Check their website: ${venue.calendarUrl}
 
-Find ALL REAL, CONFIRMED or ANNOUNCED upcoming music events from ${today} through ${futureStr}. Include shows even if tickets aren't on sale yet — if a show has been announced or is on the schedule, include it.
+Find ALL REAL, CONFIRMED or ANNOUNCED upcoming music events from ${today} through ${futureStr}. Include shows even if tickets aren't on sale yet.
 
 CRITICAL RULES:
 - Only return events you found in actual search results — do NOT invent or guess events
@@ -302,70 +267,26 @@ Return ONLY the raw JSON array. No explanation, no markdown fences.`;
   const raw = textBlocks.join('');
   const clean = raw.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
   const arrayMatch = clean.match(/\[[\s\S]*\]/);
-
-  if (!arrayMatch) {
-    console.warn(`No JSON array found for ${venue.name}`);
-    return [];
-  }
+  if (!arrayMatch) { console.warn(`No JSON array found for ${venue.name}`); return []; }
 
   const events = JSON.parse(arrayMatch[0]);
   return events
     .filter(e => e.title && e.date && e.date.match(/^\d{4}-\d{2}-\d{2}$/))
     .map(e => ({
-      venueId,
-      title: String(e.title),
-      date: e.date,
-      time: e.time || 'TBA',
-      doors: e.doors || null,
-      price: e.price || 'TBA',
-      genre: e.genre || 'Live Music',
+      venueId, title: String(e.title), date: e.date, time: e.time || 'TBA',
+      doors: e.doors || null, price: e.price || 'TBA', genre: e.genre || 'Live Music',
       description: e.description || `Live at ${venue.name}`,
-      ticketUrl: e.ticketUrl || venue.ticketBase,
-      isEtix: venue.isEtix,
-      source: e.source || venue.calendarUrl,
-      dataSource: 'claude',
+      ticketUrl: e.ticketUrl || venue.ticketBase, isEtix: venue.isEtix,
+      source: e.source || venue.calendarUrl, dataSource: 'claude',
     }));
 }
 
 // ---- MAIN HANDLER ----
-export default async (req) => {
-  // CORS headers
-  const headers = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
-    'Content-Type': 'application/json',
-    'Cache-Control': 'public, max-age=3600', // 1-hour browser cache; Blobs is the real cache
-  };
+export default async () => {
+  console.log('Starting daily event refresh…');
 
-  // Handle preflight
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { status: 204, headers });
-  }
-
-  // ---- SERVE FROM BLOBS CACHE (normal path) ----
-  try {
-    const store = getStore('events-cache');
-    const cached = await store.get('latest');
-    if (cached) {
-      console.log('Serving from Blobs cache');
-      return new Response(cached, { status: 200, headers });
-    }
-    console.log('No Blobs cache found — running live fetch (first deploy)');
-  } catch (blobErr) {
-    console.warn('Blobs read failed, falling back to live fetch:', blobErr.message);
-  }
-
-  // ---- LIVE FETCH FALLBACK (first deploy only) ----
   const seatgeekClientId = Netlify.env.get('SEATGEEK_CLIENT_ID');
-  const anthropicApiKey = Netlify.env.get('ANTHROPIC_API_KEY');
-
-  if (!seatgeekClientId && !anthropicApiKey) {
-    return new Response(
-      JSON.stringify({ error: 'No API keys configured', events: [] }),
-      { status: 500, headers }
-    );
-  }
+  const anthropicApiKey  = Netlify.env.get('ANTHROPIC_API_KEY');
 
   const allEvents = [];
   const results = { tier1: { success: 0, failed: 0 }, tier2: { success: 0, failed: 0 } };
@@ -373,7 +294,6 @@ export default async (req) => {
   // ---- TIER 1: SeatGeek ----
   if (seatgeekClientId) {
     const tier1Venues = Object.entries(VENUES).filter(([_, v]) => v.tier === 1);
-
     const tier1Results = await Promise.allSettled(
       tier1Venues.map(async ([venueId, venue]) => {
         try {
@@ -388,17 +308,12 @@ export default async (req) => {
         }
       })
     );
-
-    tier1Results.forEach(r => {
-      if (r.status === 'fulfilled') allEvents.push(...r.value);
-    });
+    tier1Results.forEach(r => { if (r.status === 'fulfilled') allEvents.push(...r.value); });
   }
 
   // ---- TIER 2: Claude + Web Search ----
   if (anthropicApiKey) {
     const tier2Venues = Object.entries(VENUES).filter(([_, v]) => v.tier === 2);
-
-    // Process in batches of 3 to avoid rate limits
     for (let i = 0; i < tier2Venues.length; i += 3) {
       const batch = tier2Venues.slice(i, i + 3);
       const batchResults = await Promise.allSettled(
@@ -415,10 +330,7 @@ export default async (req) => {
           }
         })
       );
-
-      batchResults.forEach(r => {
-        if (r.status === 'fulfilled') allEvents.push(...r.value);
-      });
+      batchResults.forEach(r => { if (r.status === 'fulfilled') allEvents.push(...r.value); });
     }
   }
 
@@ -430,9 +342,9 @@ export default async (req) => {
     seen.add(key);
     return true;
   });
-
   dedupedEvents.sort((a, b) => new Date(a.date) - new Date(b.date));
 
+  // ---- STORE TO BLOBS ----
   const payload = JSON.stringify({
     events: dedupedEvents,
     meta: {
@@ -442,18 +354,12 @@ export default async (req) => {
     },
   });
 
-  // Store to Blobs so all future requests skip the live fetch
-  try {
-    const store = getStore('events-cache');
-    await store.set('latest', payload);
-    console.log(`Stored ${dedupedEvents.length} events to Blobs cache`);
-  } catch (blobErr) {
-    console.warn('Failed to write to Blobs cache:', blobErr.message);
-  }
-
-  return new Response(payload, { status: 200, headers });
+  const store = getStore('events-cache');
+  await store.set('latest', payload);
+  console.log(`Refresh complete: ${dedupedEvents.length} events stored to Blobs`);
 };
 
+// Run daily at 9am UTC (5am ET)
 export const config = {
-  path: '/api/events',
+  schedule: '0 9 * * *',
 };
