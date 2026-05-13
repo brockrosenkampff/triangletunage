@@ -527,6 +527,8 @@
 
     /* ── Calendar grid ── */
     #cal-wrap {
+      max-width: 860px;
+      margin: 0 auto;
       padding: 16px 24px 32px;
       width: 100%;
       box-sizing: border-box;
@@ -619,9 +621,24 @@
       .event-card { padding: 12px 12px 12px 16px; }
       .event-title { font-size: 0.9rem; }
       .ticket-link { font-size: 0.65rem; padding: 3px 8px; }
-      .cal-day { min-height: 60px; }
-      .cal-event-pill { font-size: 0.6rem; }
       .header-tagline { display: none; }
+
+      /* Calendar mobile overrides */
+      #cal-wrap { padding: 10px 8px 24px; }
+      .cal-dow-row { gap: 2px; margin-bottom: 2px; }
+      .cal-dow { font-size: 0.5rem; letter-spacing: 0; padding: 2px 0; }
+      .cal-grid { gap: 2px; }
+      .cal-day { min-height: 44px; padding: 4px 3px; border-radius: 6px; }
+      .cal-day-num { font-size: 0.65rem; margin-bottom: 2px; }
+      /* Hide text pills on mobile — show colored dots instead */
+      .cal-event-pill { display: none; }
+      .cal-dot-row { display: flex !important; }
+      .cal-dot {
+        display: inline-block;
+        width: 6px; height: 6px;
+        border-radius: 50%;
+        margin: 1px;
+      }
     }
   </style>
 </head>
@@ -1042,15 +1059,30 @@ function makeCalDay(year, month, day, otherMonth, byDate, todayStr) {
     });
   }
 
+  // Mobile dot indicators (hidden on desktop via CSS)
+  const dotRow = document.createElement('div');
+  dotRow.style.cssText = 'display:none;flex-wrap:wrap;gap:2px;';
+  dotRow.className = 'cal-dot-row';
+
   events.slice(0, 3).forEach(ev => {
     const venue = VENUES[ev.venueId];
     const color = venue ? venue.color : 'purple';
+
+    // Desktop pill
     const pill = document.createElement('div');
     pill.className = 'cal-event-pill';
     pill.dataset.color = color;
     pill.textContent = ev.title;
     cell.appendChild(pill);
+
+    // Mobile dot
+    const dot = document.createElement('span');
+    dot.className = 'cal-dot';
+    dot.style.background = `var(--${color})`;
+    dotRow.appendChild(dot);
   });
+  cell.appendChild(dotRow);
+
   if (events.length > 3) {
     const more = document.createElement('button');
     more.style.cssText = 'font-size:0.6rem;color:var(--muted);padding:1px 5px;background:none;border:none;cursor:pointer;text-align:left;text-decoration:underline;text-underline-offset:2px;';
