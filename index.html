@@ -241,9 +241,9 @@
 
     /* ── Main layout ── */
     main {
-      max-width: 860px;
+      max-width: 1100px;
       margin: 0 auto;
-      padding: 20px 12px 60px;
+      padding: 20px 20px 60px;
     }
 
     /* ── Loading ── */
@@ -451,14 +451,19 @@
 
     /* ── View toggle bar ── */
     #view-bar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .view-bar-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 12px 20px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       flex-wrap: wrap;
       gap: 10px;
-      padding: 12px 20px;
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
     }
 
     .month-nav {
@@ -527,10 +532,9 @@
 
     /* ── Calendar grid ── */
     #cal-wrap {
-      max-width: 860px;
+      max-width: 1100px;
       margin: 0 auto;
-      padding: 16px 24px 32px;
-      width: 100%;
+      padding: 16px 20px 32px;
       box-sizing: border-box;
     }
 
@@ -690,15 +694,17 @@
 
 <!-- View controls -->
 <div id="view-bar">
-  <div class="month-nav">
-    <button class="month-nav-btn" id="prev-month">&#8592;</button>
-    <span class="month-label" id="month-label">May 2026</span>
-    <button class="month-nav-btn" id="next-month">&#8594;</button>
-    <span class="show-count-label" id="show-count-label"></span>
-  </div>
-  <div class="view-btns">
-    <button class="view-btn active" id="btn-calendar" onclick="switchView('calendar')">Calendar</button>
-    <button class="view-btn" id="btn-list" onclick="switchView('list')">List</button>
+  <div class="view-bar-inner">
+    <div class="month-nav">
+      <button class="month-nav-btn" id="prev-month">&#8592;</button>
+      <span class="month-label" id="month-label">May 2026</span>
+      <button class="month-nav-btn" id="next-month">&#8594;</button>
+      <span class="show-count-label" id="show-count-label"></span>
+    </div>
+    <div class="view-btns">
+      <button class="view-btn active" id="btn-calendar" onclick="switchView('calendar')">Calendar</button>
+      <button class="view-btn" id="btn-list" onclick="switchView('list')">List</button>
+    </div>
   </div>
 </div>
 
