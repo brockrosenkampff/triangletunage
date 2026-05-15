@@ -124,6 +124,7 @@
       color: var(--muted);
       text-transform: uppercase;
       margin-top: 20px;
+      white-space: nowrap;
     }
 
     /* ── Filter bar ── */
@@ -722,6 +723,7 @@
     @media (max-width: 500px) {
       header { padding: 10px 14px; }
       .hero-section { padding: 32px 16px 28px; }
+      .hero-cities { letter-spacing: 2px; font-size: 0.65rem; }
       #filter-bar { top: 58px; padding: 10px 12px; gap: 6px; }
       .venue-chip { font-size: 0.7rem; padding: 4px 9px; }
       .event-card { padding: 12px 12px 12px 16px; }
@@ -776,7 +778,7 @@
 <div class="hero-section">
   <div class="hero-headline">Live Music.</div>
   <div class="hero-subline">Your Triangle.</div>
-  <div class="hero-cities">Raleigh &nbsp;·&nbsp; Durham &nbsp;·&nbsp; Chapel Hill</div>
+  <div class="hero-cities">Raleigh &nbsp;·&nbsp; Durham &nbsp;·&nbsp; Chapel&nbsp;Hill</div>
 </div>
 
 <!-- Venue filter chips -->
