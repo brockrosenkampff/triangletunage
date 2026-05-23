@@ -35,10 +35,10 @@ const VENUES = {
     isEtix: false,
   },
   stanczyk: {
-    name: "Stanczyk's", city: 'Durham', color: 'purple', tier: 2,
-    searchQuery: "Stanczyk's Durham NC upcoming live music events",
-    calendarUrl: 'https://www.stanczyks.com/',
-    ticketBase: 'https://www.stanczyks.com/',
+    name: "Stanczyks Music Bar", city: 'Durham', color: 'purple', tier: 2,
+    searchQuery: "Stanczyks Music Bar Durham NC upcoming live music events concerts",
+    calendarUrl: 'https://www.stanczyksdurham.com/',
+    ticketBase: 'https://www.stanczyksdurham.com/',
     isEtix: false,
   },
   redhat: {
