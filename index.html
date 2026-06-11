@@ -19,8 +19,8 @@
       --muted: #888894;
       --purple: #a855f7;
       --purple-dim: #7c3aed33;
-      --magenta: #ec4899;
-      --magenta-dim: #be185d33;
+      --magenta: #c93b7a;
+      --magenta-dim: #c93b7a33;
       --amber: #f59e0b;
       --amber-dim: #92400e33;
       --green: #22c55e;
@@ -389,16 +389,6 @@
       align-items: flex-end;
       gap: 6px;
       flex-shrink: 0;
-    }
-
-    .price-badge {
-      font-size: 0.75rem;
-      font-weight: 700;
-      padding: 3px 9px;
-      border-radius: 999px;
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      white-space: nowrap;
     }
 
     .ticket-link {
@@ -1042,7 +1032,6 @@ function renderEvents() {
           </div>
         </div>
         <div class="event-right">
-          <span class="price-badge">${escHtml(event.price || 'TBA')}</span>
           ${event.ticketUrl ? `<a class="ticket-link" href="${escHtml(event.ticketUrl)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Tickets →</a>` : ''}
           <a class="gcal-link" href="${makeGCalUrl(event, venueName)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="Add to Google Calendar">📅 Add</a>
         </div>
@@ -1318,7 +1307,6 @@ function openDayPanel(dateStr, events) {
         </div>
       </div>
       <div class="event-right">
-        <span class="price-badge">${escHtml(event.price || 'TBA')}</span>
         ${event.ticketUrl ? `<a class="ticket-link" href="${escHtml(event.ticketUrl)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Tickets →</a>` : ''}
         <a class="gcal-link" href="${makeGCalUrl(event, venueName)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="Add to Google Calendar">📅 Add</a>
       </div>

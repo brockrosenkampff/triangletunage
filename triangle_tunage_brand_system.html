@@ -1,0 +1,442 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Space+Mono:wght@400;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0d0b14; font-family: 'Space Mono', monospace; color: #f5f0e8; }
+
+  .section-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 4px;
+    color: #5a4e72;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+
+  /* HERO */
+  .hero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 48px 32px 40px;
+    border-bottom: 1px solid #1e1930;
+    position: relative;
+  }
+
+  .icon-wrap {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    margin-bottom: 28px;
+  }
+
+  .wordmark {
+    text-align: center;
+  }
+
+  .wordmark-top {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-weight: 900;
+    font-size: 38px;
+    letter-spacing: 8px;
+    color: #f5f0e8;
+    line-height: 1;
+    display: block;
+  }
+
+  .wordmark-bottom {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-weight: 700;
+    font-style: italic;
+    font-size: 16px;
+    letter-spacing: 5px;
+    color: #c93b7a;
+    margin-top: 6px;
+    display: block;
+  }
+
+  .tagline {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 5px;
+    color: #5a4e72;
+    margin-top: 14px;
+  }
+
+  /* DIVIDER */
+  .divider { height: 1px; background: #1e1930; margin: 0 32px; }
+
+  /* ICON SIZES */
+  .sizes-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 36px;
+    padding: 36px 32px;
+    border-bottom: 1px solid #1e1930;
+    flex-wrap: wrap;
+  }
+
+  .size-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .size-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 8px;
+    letter-spacing: 2px;
+    color: #3d3458;
+  }
+
+  /* PALETTE */
+  .palette-row {
+    display: flex;
+    gap: 12px;
+    padding: 36px 32px;
+    border-bottom: 1px solid #1e1930;
+    flex-wrap: wrap;
+  }
+
+  .swatch {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .swatch-block {
+    width: 64px;
+    height: 64px;
+    border-radius: 10px;
+  }
+
+  .swatch-name {
+    font-size: 8px;
+    letter-spacing: 1.5px;
+    color: #5a4e72;
+    text-align: center;
+  }
+
+  .swatch-hex {
+    font-size: 8px;
+    color: #3d3458;
+    text-align: center;
+  }
+
+  /* TYPE */
+  .type-section {
+    padding: 36px 32px;
+    border-bottom: 1px solid #1e1930;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .type-specimen-1 {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-weight: 900;
+    font-size: 42px;
+    color: #f5f0e8;
+    line-height: 1;
+    letter-spacing: 2px;
+  }
+
+  .type-specimen-2 {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-weight: 700;
+    font-style: italic;
+    font-size: 22px;
+    color: #c93b7a;
+    letter-spacing: 2px;
+  }
+
+  .type-specimen-3 {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: #8b7aaa;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+
+  .type-specimen-4 {
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    color: #f5f0e8;
+    line-height: 1.7;
+    max-width: 440px;
+  }
+
+  /* USAGE EXAMPLES */
+  .usage-row {
+    display: flex;
+    gap: 16px;
+    padding: 36px 32px 40px;
+    flex-wrap: wrap;
+  }
+
+  .usage-card {
+    background: #110f1c;
+    border: 1px solid #1e1930;
+    border-radius: 12px;
+    padding: 20px;
+    flex: 1;
+    min-width: 160px;
+  }
+
+  .usage-card-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 8px;
+    letter-spacing: 3px;
+    color: #5a4e72;
+    margin-bottom: 16px;
+  }
+
+  /* Event pill */
+  .event-pill {
+    background: #1e1930;
+    border-left: 3px solid #c93b7a;
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+  }
+
+  .event-pill-venue {
+    font-size: 8px;
+    letter-spacing: 2px;
+    color: #8b2fc9;
+    margin-bottom: 3px;
+  }
+
+  .event-pill-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: #f5f0e8;
+    margin-bottom: 2px;
+  }
+
+  .event-pill-date {
+    font-size: 8px;
+    color: #5a4e72;
+    letter-spacing: 1px;
+  }
+
+  /* Social avatar mockup */
+  .social-avatar {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+
+  .avatar-ring {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: #0d0b14;
+    border: 1.5px solid #8b2fc9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .avatar-text {
+    font-family: 'Space Mono', monospace;
+  }
+
+  .avatar-handle {
+    font-size: 11px;
+    color: #f5f0e8;
+  }
+
+  .avatar-sub {
+    font-size: 9px;
+    color: #5a4e72;
+    margin-top: 2px;
+  }
+
+  .post-text {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: #8b7aaa;
+    line-height: 1.6;
+    border-top: 1px solid #1e1930;
+    padding-top: 10px;
+    margin-top: 4px;
+  }
+
+  .post-text em {
+    color: #c93b7a;
+    font-style: normal;
+  }
+</style>
+</head>
+<body>
+
+<!-- HERO LOCKUP -->
+<div class="hero">
+  <div class="icon-wrap">
+    <svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+      <!-- Outer glow ring -->
+      <circle cx="60" cy="60" r="56" fill="none" stroke="#8b2fc9" stroke-width="0.6" opacity="0.3"/>
+      <!-- BG circle -->
+      <circle cx="60" cy="60" r="52" fill="#110f1c"/>
+      <!-- Outer triangle -->
+      <polygon points="60,10 108,92 12,92" fill="none" stroke="#f5f0e8" stroke-width="2" opacity="0.9"/>
+      <!-- Mid triangle purple -->
+      <polygon points="60,24 98,86 22,86" fill="none" stroke="#8b2fc9" stroke-width="1.2" opacity="0.65"/>
+      <!-- Inner triangle magenta -->
+      <polygon points="60,38 88,80 32,80" fill="none" stroke="#c93b7a" stroke-width="1" opacity="0.6"/>
+      <!-- Innermost fill -->
+      <polygon points="60,50 78,74 42,74" fill="#c93b7a" opacity="0.12"/>
+      <!-- Guitar string waves -->
+      <path d="M30,58 Q37,53 44,58 Q51,63 58,58 Q65,53 72,58 Q79,63 86,58 Q91,54 90,58" fill="none" stroke="#e8a020" stroke-width="1.6" opacity="0.8"/>
+      <path d="M32,68 Q39,63 46,68 Q53,73 60,68 Q67,63 74,68 Q81,73 88,68" fill="none" stroke="#c93b7a" stroke-width="1" opacity="0.5"/>
+      <!-- Center point -->
+      <circle cx="60" cy="60" r="5" fill="#e8a020" opacity="0.95"/>
+      <circle cx="60" cy="60" r="2" fill="#0d0b14"/>
+    </svg>
+  </div>
+
+  <div class="wordmark">
+    <span class="wordmark-top">TRIANGLE</span>
+    <span class="wordmark-bottom">tunage</span>
+  </div>
+  <div class="tagline">YOUR TRIANGLE, LIVE</div>
+</div>
+
+<!-- ICON SCALE -->
+<div class="sizes-row">
+  <div style="font-family:'Space Mono',monospace; font-size:9px; letter-spacing:3px; color:#3d3458; writing-mode:vertical-rl; margin-right:8px; align-self:center;">ICON SCALE</div>
+
+  <!-- 96px -->
+  <div class="size-item">
+    <svg width="96" height="96" viewBox="0 0 120 120">
+      <circle cx="60" cy="60" r="52" fill="#110f1c"/>
+      <polygon points="60,10 108,92 12,92" fill="none" stroke="#f5f0e8" stroke-width="2" opacity="0.9"/>
+      <polygon points="60,24 98,86 22,86" fill="none" stroke="#8b2fc9" stroke-width="1.2" opacity="0.65"/>
+      <polygon points="60,38 88,80 32,80" fill="none" stroke="#c93b7a" stroke-width="1" opacity="0.6"/>
+      <path d="M30,58 Q37,53 44,58 Q51,63 58,58 Q65,53 72,58 Q79,63 86,58 Q91,54 90,58" fill="none" stroke="#e8a020" stroke-width="1.6" opacity="0.8"/>
+      <circle cx="60" cy="60" r="5" fill="#e8a020" opacity="0.95"/>
+      <circle cx="60" cy="60" r="2" fill="#0d0b14"/>
+    </svg>
+    <div class="size-label">96px</div>
+  </div>
+
+  <!-- 64px -->
+  <div class="size-item">
+    <svg width="64" height="64" viewBox="0 0 120 120">
+      <circle cx="60" cy="60" r="52" fill="#110f1c"/>
+      <polygon points="60,10 108,92 12,92" fill="none" stroke="#f5f0e8" stroke-width="2" opacity="0.9"/>
+      <polygon points="60,24 98,86 22,86" fill="none" stroke="#8b2fc9" stroke-width="1.2" opacity="0.65"/>
+      <polygon points="60,38 88,80 32,80" fill="none" stroke="#c93b7a" stroke-width="1" opacity="0.6"/>
+      <path d="M30,58 Q37,53 44,58 Q51,63 58,58 Q65,53 72,58 Q79,63 86,58 Q91,54 90,58" fill="none" stroke="#e8a020" stroke-width="1.8" opacity="0.85"/>
+      <circle cx="60" cy="60" r="5.5" fill="#e8a020" opacity="0.95"/>
+      <circle cx="60" cy="60" r="2" fill="#0d0b14"/>
+    </svg>
+    <div class="size-label">64px</div>
+  </div>
+
+  <!-- 48px avatar -->
+  <div class="size-item">
+    <svg width="48" height="48" viewBox="0 0 120 120">
+      <circle cx="60" cy="60" r="58" fill="#110f1c"/>
+      <polygon points="60,10 108,92 12,92" fill="none" stroke="#f5f0e8" stroke-width="3" opacity="0.9"/>
+      <polygon points="60,26 96,86 24,86" fill="none" stroke="#8b2fc9" stroke-width="1.5" opacity="0.6"/>
+      <path d="M28,58 Q38,50 48,58 Q58,66 68,58 Q78,50 88,58 Q94,64 92,58" fill="none" stroke="#e8a020" stroke-width="2.5" opacity="0.9"/>
+      <circle cx="60" cy="60" r="6" fill="#c93b7a" opacity="0.95"/>
+    </svg>
+    <div class="size-label">48px / social</div>
+  </div>
+
+  <!-- 32px favicon -->
+  <div class="size-item">
+    <svg width="32" height="32" viewBox="0 0 120 120">
+      <circle cx="60" cy="60" r="58" fill="#110f1c"/>
+      <polygon points="60,8 110,96 10,96" fill="none" stroke="#f5f0e8" stroke-width="4" opacity="0.9"/>
+      <polygon points="60,28 96,88 24,88" fill="none" stroke="#8b2fc9" stroke-width="2" opacity="0.55"/>
+      <circle cx="60" cy="62" r="7" fill="#e8a020" opacity="0.95"/>
+    </svg>
+    <div class="size-label">32px / favicon</div>
+  </div>
+</div>
+
+<!-- PALETTE -->
+<div class="palette-row">
+  <div style="font-family:'Space Mono',monospace; font-size:9px; letter-spacing:3px; color:#3d3458; writing-mode:vertical-rl; margin-right:4px; align-self:center;">PALETTE</div>
+  <div class="swatch"><div class="swatch-block" style="background:#0d0b14; border:1px solid #1e1930;"></div><div class="swatch-name">VOID</div><div class="swatch-hex">#0d0b14</div></div>
+  <div class="swatch"><div class="swatch-block" style="background:#110f1c;"></div><div class="swatch-name">DEEP</div><div class="swatch-hex">#110f1c</div></div>
+  <div class="swatch"><div class="swatch-block" style="background:#1e1930;"></div><div class="swatch-name">SURFACE</div><div class="swatch-hex">#1e1930</div></div>
+  <div class="swatch"><div class="swatch-block" style="background:#8b2fc9;"></div><div class="swatch-name">PURPLE</div><div class="swatch-hex">#8b2fc9</div></div>
+  <div class="swatch"><div class="swatch-block" style="background:#c93b7a;"></div><div class="swatch-name">MAGENTA</div><div class="swatch-hex">#c93b7a</div></div>
+  <div class="swatch"><div class="swatch-block" style="background:#e8a020;"></div><div class="swatch-name">AMBER</div><div class="swatch-hex">#e8a020</div></div>
+  <div class="swatch"><div class="swatch-block" style="background:#f5f0e8;"></div><div class="swatch-name">CREAM</div><div class="swatch-hex">#f5f0e8</div></div>
+</div>
+
+<!-- TYPE -->
+<div class="type-section">
+  <div class="section-label">TYPOGRAPHY</div>
+  <div class="type-specimen-1">Playfair Display<br/>Black 900</div>
+  <div class="type-specimen-2">Playfair Display Italic — headlines &amp; artist names</div>
+  <div class="type-specimen-3">Space Mono 700 — labels, dates, venues</div>
+  <div class="type-specimen-4">Space Mono Regular — body copy, show descriptions, times. The monospace keeps everything feeling like a setlist or a marquee.</div>
+</div>
+
+<!-- USAGE IN CONTEXT -->
+<div class="usage-row">
+  <div style="font-family:'Space Mono',monospace; font-size:9px; letter-spacing:3px; color:#3d3458; writing-mode:vertical-rl; align-self:flex-start; margin-top:20px;">IN USE</div>
+
+  <!-- Event card mockup -->
+  <div class="usage-card">
+    <div class="usage-card-title">EVENT LISTING</div>
+    <div class="event-pill">
+      <div class="event-pill-venue">MOTORCO · DURHAM</div>
+      <div class="event-pill-name">Hiss Golden Messenger</div>
+      <div class="event-pill-date">FRI APR 04 · DOORS 7PM · $22</div>
+    </div>
+    <div class="event-pill" style="border-left-color: #8b2fc9;">
+      <div class="event-pill-venue" style="color:#c93b7a;">POURHOUSE · RALEIGH</div>
+      <div class="event-pill-name">Amythyst Kiah</div>
+      <div class="event-pill-date">SAT APR 05 · DOORS 8PM · $18</div>
+    </div>
+    <div class="event-pill" style="border-left-color: #e8a020;">
+      <div class="event-pill-venue" style="color:#8b2fc9;">RED HAT AMP · RALEIGH</div>
+      <div class="event-pill-name">Caamp</div>
+      <div class="event-pill-date">SUN APR 06 · DOORS 6PM · $45</div>
+    </div>
+  </div>
+
+  <!-- Social mockup -->
+  <div class="usage-card">
+    <div class="usage-card-title">SOCIAL PROFILE</div>
+    <div class="social-avatar">
+      <div class="avatar-ring">
+        <svg width="32" height="32" viewBox="0 0 120 120">
+          <polygon points="60,8 110,96 10,96" fill="none" stroke="#f5f0e8" stroke-width="5" opacity="0.9"/>
+          <polygon points="60,28 96,88 24,88" fill="none" stroke="#8b2fc9" stroke-width="2.5" opacity="0.6"/>
+          <circle cx="60" cy="62" r="8" fill="#e8a020"/>
+        </svg>
+      </div>
+      <div class="avatar-text">
+        <div class="avatar-handle">@TriangleTunage</div>
+        <div class="avatar-sub">YOUR TRIANGLE, LIVE</div>
+      </div>
+    </div>
+    <div class="post-text">
+      🎸 Tonight at Motorco:<br/>
+      <em>Hiss Golden Messenger</em><br/>
+      Doors 7 · $22 at the door<br/><br/>
+      <em>#TriangleTunage #Durham #LiveMusic</em>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

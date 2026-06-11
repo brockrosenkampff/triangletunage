@@ -249,7 +249,7 @@ Return ONLY the raw JSON array. No explanation, no markdown fences.`;
       'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 8000,
       tools: [{ type: 'web_search_20250305', name: 'web_search' }],
       messages: [{ role: 'user', content: prompt }],
@@ -331,6 +331,31 @@ export default async () => {
         })
       );
       batchResults.forEach(r => { if (r.status === 'fulfilled') allEvents.push(...r.value); });
+    }
+  }
+
+  // ---- SALVAGE GUARD ----
+  // If an entire tier failed, keep that tier's events from the
+  // previous cache instead of wiping them (drop past dates).
+  const tier1Dead = results.tier1.failed > 0 && results.tier1.success === 0;
+  const tier2Dead = results.tier2.failed > 0 && results.tier2.success === 0;
+  if (tier1Dead || tier2Dead) {
+    try {
+      const store = getStore('events-cache');
+      const prev = await store.get('latest');
+      if (prev) {
+        const prevEvents = (JSON.parse(prev).events || []);
+        const todayStr = new Date().toISOString().split('T')[0];
+        const salvaged = prevEvents.filter(e =>
+          e.date >= todayStr &&
+          ((tier1Dead && e.dataSource === 'seatgeek') ||
+           (tier2Dead && e.dataSource === 'claude'))
+        );
+        console.warn(`Tier failure — salvaged ${salvaged.length} events from previous cache (tier1Dead=${tier1Dead}, tier2Dead=${tier2Dead})`);
+        allEvents.push(...salvaged);
+      }
+    } catch (salvageErr) {
+      console.warn('Salvage from previous cache failed:', salvageErr.message);
     }
   }
 

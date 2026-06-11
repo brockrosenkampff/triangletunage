@@ -1,0 +1,1 @@
+This folder includes work around building a website that is a local music concert calendar. The chat instructions should be direct and concise and catered to someone who isn't familiar with webdev or hosting websites, but well in tune with the music scene 
