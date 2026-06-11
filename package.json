@@ -1,0 +1,8 @@
+{
+  "name": "triangletunage",
+  "private": true,
+  "description": "Live music calendar for the Triangle — triangletunage.com",
+  "dependencies": {
+    "@netlify/blobs": "^8.1.0"
+  }
+}
