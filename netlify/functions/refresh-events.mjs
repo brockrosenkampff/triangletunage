@@ -205,16 +205,13 @@ async function fetchClaudeVenue(venueId, venue, apiKey) {
   const futureStr = future.toISOString().split('T')[0];
   const currentYear = new Date().getFullYear();
 
-  const prompt = `You are a live music researcher. Search thoroughly for upcoming concerts and live music events at ${venue.name} in ${venue.city}, NC.
+  const prompt = `You are a live music researcher. Search for upcoming concerts and live music events at ${venue.name} in ${venue.city}, NC.
 
-Do MULTIPLE searches to find events:
-1. Search "${venue.name} ${venue.city} upcoming concerts 2026" for their main calendar
-2. Search "${venue.name} schedule summer fall 2026" for future announcements
-3. Search "${venue.name} concerts announced ${currentYear}" for recently announced shows
-4. Search "site:bandsintown.com ${venue.name}" for Bandsintown listings
-5. Check their website: ${venue.calendarUrl}
+Do UP TO 2 searches to find events:
+1. Search "${venue.name} ${venue.city} upcoming concerts ${currentYear}" for their main calendar
+2. Check their website: ${venue.calendarUrl}
 
-Find ALL REAL, CONFIRMED or ANNOUNCED upcoming music events from ${today} through ${futureStr}. Include shows even if tickets aren't on sale yet.
+Find ALL REAL, CONFIRMED or ANNOUNCED upcoming music events from ${today} through ${futureStr}. Include shows even if tickets aren't on sale yet. Work quickly — keep searches focused and don't spend extra time double-checking.
 
 CRITICAL RULES:
 - Only return events you found in actual search results — do NOT invent or guess events
@@ -250,10 +247,12 @@ Return ONLY the raw JSON array. No explanation, no markdown fences.`;
     },
     body: JSON.stringify({
       model: 'claude-sonnet-4-6',
-      max_tokens: 8000,
-      tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+      max_tokens: 4000,
+      tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 2 }],
       messages: [{ role: 'user', content: prompt }],
     }),
+    // Don't let one slow venue eat the whole function's time budget
+    signal: AbortSignal.timeout(45000),
   });
 
   if (!response.ok) {
@@ -291,7 +290,31 @@ export default async () => {
   const allEvents = [];
   const results = { tier1: { success: 0, failed: 0 }, tier2: { success: 0, failed: 0 } };
 
+  // ---- TIER 2: Claude + Web Search ----
+  // Runs FIRST and fully in parallel — this is the slow tier, so it gets
+  // first claim on the function's time budget instead of being starved
+  // after Tier 1 finishes (which is what was happening before).
+  if (anthropicApiKey) {
+    const tier2Venues = Object.entries(VENUES).filter(([_, v]) => v.tier === 2);
+    const tier2Results = await Promise.allSettled(
+      tier2Venues.map(async ([venueId, venue]) => {
+        try {
+          const events = await fetchClaudeVenue(venueId, venue, anthropicApiKey);
+          console.log(`Claude: ${venue.name} → ${events.length} events`);
+          results.tier2.success++;
+          return events;
+        } catch (err) {
+          console.error(`Claude error for ${venue.name}:`, err.message);
+          results.tier2.failed++;
+          return [];
+        }
+      })
+    );
+    tier2Results.forEach(r => { if (r.status === 'fulfilled') allEvents.push(...r.value); });
+  }
+
   // ---- TIER 1: SeatGeek ----
+  // Fast (all 9 venues complete in a few seconds), so it runs after Tier 2.
   if (seatgeekClientId) {
     const tier1Venues = Object.entries(VENUES).filter(([_, v]) => v.tier === 1);
     const tier1Results = await Promise.allSettled(
@@ -309,29 +332,6 @@ export default async () => {
       })
     );
     tier1Results.forEach(r => { if (r.status === 'fulfilled') allEvents.push(...r.value); });
-  }
-
-  // ---- TIER 2: Claude + Web Search ----
-  if (anthropicApiKey) {
-    const tier2Venues = Object.entries(VENUES).filter(([_, v]) => v.tier === 2);
-    for (let i = 0; i < tier2Venues.length; i += 3) {
-      const batch = tier2Venues.slice(i, i + 3);
-      const batchResults = await Promise.allSettled(
-        batch.map(async ([venueId, venue]) => {
-          try {
-            const events = await fetchClaudeVenue(venueId, venue, anthropicApiKey);
-            console.log(`Claude: ${venue.name} → ${events.length} events`);
-            results.tier2.success++;
-            return events;
-          } catch (err) {
-            console.error(`Claude error for ${venue.name}:`, err.message);
-            results.tier2.failed++;
-            return [];
-          }
-        })
-      );
-      batchResults.forEach(r => { if (r.status === 'fulfilled') allEvents.push(...r.value); });
-    }
   }
 
   // ---- SALVAGE GUARD ----
