@@ -197,6 +197,30 @@ async function fetchSeatGeekVenue(venueId, venue, clientId) {
     });
 }
 
+// Extracts the first complete, balanced top-level JSON array from a string,
+// ignoring brackets that appear inside string literals.
+function extractJsonArray(text) {
+  const start = text.indexOf('[');
+  if (start === -1) return null;
+  let depth = 0, inString = false, escape = false;
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i];
+    if (inString) {
+      if (escape) escape = false;
+      else if (ch === '\\') escape = true;
+      else if (ch === '"') inString = false;
+      continue;
+    }
+    if (ch === '"') { inString = true; continue; }
+    if (ch === '[') depth++;
+    else if (ch === ']') {
+      depth--;
+      if (depth === 0) return text.slice(start, i + 1);
+    }
+  }
+  return null;
+}
+
 // ---- TIER 2: Claude API + Web Search ----
 async function fetchClaudeVenue(venueId, venue, apiKey) {
   const today = new Date().toISOString().split('T')[0];
@@ -263,12 +287,24 @@ Return ONLY the raw JSON array. No explanation, no markdown fences.`;
 
   const data = await response.json();
   const textBlocks = data.content.filter(b => b.type === 'text').map(b => b.text);
-  const raw = textBlocks.join('');
+  const raw = textBlocks.join('\n');
   const clean = raw.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
-  const arrayMatch = clean.match(/\[[\s\S]*\]/);
-  if (!arrayMatch) { console.warn(`No JSON array found for ${venue.name}`); return []; }
 
-  const events = JSON.parse(arrayMatch[0]);
+  // Claude sometimes emits multiple text blocks (e.g. "[]" from an early
+  // thought, then the real array later). A greedy [...] regex would grab
+  // everything from the first "[" to the last "]", producing invalid JSON.
+  // Instead, scan forward from the first "[" and extract just the first
+  // *complete*, balanced top-level array.
+  const jsonStr = extractJsonArray(clean);
+  if (!jsonStr) { console.warn(`No JSON array found for ${venue.name}`); return []; }
+
+  let events;
+  try {
+    events = JSON.parse(jsonStr);
+  } catch (err) {
+    console.error(`JSON parse failed for ${venue.name}: ${err.message}. Raw snippet: ${clean.slice(0, 300)}`);
+    return [];
+  }
   return events
     .filter(e => e.title && e.date && e.date.match(/^\d{4}-\d{2}-\d{2}$/))
     .map(e => ({
