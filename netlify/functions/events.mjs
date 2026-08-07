@@ -232,6 +232,78 @@ async function fetchSeatGeekVenue(venueId, venue, clientId) {
     });
 }
 
+// ---- MODEL FALLBACK CHAIN ----
+// Keep this list in sync with refresh-events.mjs. From the 4.6 generation
+// onward, Claude model IDs are pinned snapshots with no evergreen "-latest"
+// alias, so a retired model would otherwise take the whole tier down at once
+// (as claude-sonnet-4's retirement did in June 2026).
+//
+// Fall through ONLY on model-not-found errors. Billing (402), rate limit (429)
+// and overload (529) are not fixed by switching models.
+const CLAUDE_MODELS = [
+  'claude-sonnet-4-6',
+  'claude-sonnet-5',
+  'claude-haiku-4-5-20251001',
+];
+
+function isModelNotFound(status, errText) {
+  if (status !== 404 && status !== 400) return false;
+  return /model/i.test(errText);
+}
+
+async function callClaude({ apiKey, prompt, maxTokens, maxUses, label, timeoutMs }) {
+  const tool = { type: 'web_search_20250305', name: 'web_search' };
+  if (maxUses) tool.max_uses = maxUses;
+
+  let lastModelErr = null;
+
+  for (let i = 0; i < CLAUDE_MODELS.length; i++) {
+    const model = CLAUDE_MODELS[i];
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: maxTokens,
+        tools: [tool],
+        messages: [{ role: 'user', content: prompt }],
+      }),
+      ...(timeoutMs ? { signal: AbortSignal.timeout(timeoutMs) } : {}),
+    });
+
+    if (response.ok) {
+      if (i > 0) {
+        console.warn(
+          `MODEL FALLBACK: "${label}" succeeded on "${model}" after "${CLAUDE_MODELS[0]}" was rejected. ` +
+          `Update CLAUDE_MODELS — the primary model has likely been retired.`
+        );
+      }
+      return response.json();
+    }
+
+    const errText = await response.text();
+
+    if (isModelNotFound(response.status, errText)) {
+      console.error(
+        `Model "${model}" rejected for "${label}": ${response.status} ${errText.slice(0, 200)} — trying next model`
+      );
+      lastModelErr = new Error(`Claude API rejected model ${model} (${response.status})`);
+      continue;
+    }
+
+    console.error(`Claude API error for "${label}": ${response.status} ${errText.slice(0, 300)}`);
+    throw new Error(`Claude API returned ${response.status}`);
+  }
+
+  console.error(`ALL MODELS REJECTED for "${label}" — every entry in CLAUDE_MODELS is dead.`);
+  throw lastModelErr ?? new Error('All Claude models failed');
+}
+
 // ---- TIER 2: Claude API + Web Search ----
 async function fetchClaudeVenue(venueId, venue, apiKey) {
   const today = new Date().toISOString().split('T')[0];
@@ -276,28 +348,12 @@ Return ONLY a valid JSON array (no markdown, no preamble). Each object must have
 
 Return ONLY the raw JSON array. No explanation, no markdown fences.`;
 
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 8000,
-      tools: [{ type: 'web_search_20250305', name: 'web_search' }],
-      messages: [{ role: 'user', content: prompt }],
-    }),
+  const data = await callClaude({
+    apiKey,
+    prompt,
+    maxTokens: 8000,
+    label: venue.name,
   });
-
-  if (!response.ok) {
-    const errText = await response.text();
-    console.error(`Claude API error for ${venue.name}: ${response.status} ${errText}`);
-    throw new Error(`Claude API returned ${response.status}`);
-  }
-
-  const data = await response.json();
   const textBlocks = data.content.filter(b => b.type === 'text').map(b => b.text);
   const raw = textBlocks.join('');
   const clean = raw.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
