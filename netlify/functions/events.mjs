@@ -20,16 +20,16 @@ const VENUES = {
   },
   pourhouse: {
     name: 'The Raleigh Pourhouse', city: 'Raleigh', color: 'magenta', tier: 2,
-    searchQuery: 'Raleigh Pourhouse upcoming concerts live music',
-    calendarUrl: 'https://www.etix.com/ticket/v/13617/the-pourhouse-downtown',
-    ticketBase: 'https://www.etix.com/ticket/v/13617/the-pourhouse-downtown',
-    isEtix: true,
+    searchQuery: 'The Pour House Music Hall Raleigh NC upcoming concerts live music',
+    calendarUrl: 'https://www.pourhouseraleigh.com/calendar',
+    ticketBase: 'https://www.pourhouseraleigh.com/calendar',
+    isEtix: false,
   },
   bowstring: {
     name: 'Bowstring Brewyard', city: 'Raleigh', color: 'amber', tier: 2,
     searchQuery: 'Bowstring Brewyard Raleigh NC upcoming live music events',
-    calendarUrl: 'https://raleigh.bowstringbrewyard.com/events/',
-    ticketBase: 'https://raleigh.bowstringbrewyard.com/events/',
+    calendarUrl: 'https://raleigh.bowstringbrewyard.com/live-music-and-events/',
+    ticketBase: 'https://raleigh.bowstringbrewyard.com/live-music-and-events/',
     isEtix: false,
   },
   stanczyk: {
@@ -60,6 +60,13 @@ const VENUES = {
   catscradle: {
     name: "Cat's Cradle", city: 'Carrboro', color: 'magenta', tier: 1,
     seatgeekSlug: 'cats-cradle',
+    // The Back Room is a separate SeatGeek venue but the same building —
+    // fold it in here so Back Room shows appear under the Cat's Cradle chip,
+    // notated with a room badge on the card.
+    seatgeekRooms: [
+      { slug: 'cats-cradle',                room: null },
+      { slug: 'cat-s-cradle-back-room-1',   room: 'Back Room' },
+    ],
     ticketBase: 'https://catscradle.com/',
     isEtix: false,
   },
@@ -85,15 +92,15 @@ const VENUES = {
   fruit: {
     name: 'The Fruit', city: 'Durham', color: 'purple', tier: 2,
     searchQuery: 'The Fruit Durham NC upcoming concerts live music events',
-    calendarUrl: 'https://www.durhamfruit.com/',
-    ticketBase: 'https://www.durhamfruit.com/',
+    calendarUrl: 'https://app.opendate.io/c/durham-fruit-337',
+    ticketBase: 'https://app.opendate.io/c/durham-fruit-337',
     isEtix: false,
   },
   local506: {
     name: 'Local 506', city: 'Chapel Hill', color: 'amber', tier: 2,
     searchQuery: 'Local 506 Chapel Hill NC upcoming concerts live music',
-    calendarUrl: 'https://local506.com/',
-    ticketBase: 'https://local506.com/',
+    calendarUrl: 'https://local506.com/events/',
+    ticketBase: 'https://local506.com/events/',
     isEtix: false,
   },
   walnutcreek: {
@@ -111,19 +118,21 @@ const VENUES = {
   hawriver: {
     name: 'Haw River Ballroom', city: 'Saxapahaw', color: 'amber', tier: 2,
     searchQuery: 'Haw River Ballroom Saxapahaw NC upcoming concerts live music',
-    calendarUrl: 'https://hawriverballroom.com/',
-    ticketBase: 'https://hawriverballroom.com/',
+    calendarUrl: 'https://www.hawriverballroom.com/calendar',
+    ticketBase: 'https://www.hawriverballroom.com/calendar',
     isEtix: false,
   },
   pinhook: {
     name: 'The Pinhook', city: 'Durham', color: 'purple', tier: 2,
     searchQuery: 'The Pinhook Durham NC upcoming concerts live music events',
-    calendarUrl: 'https://thepinhook.com/',
-    ticketBase: 'https://thepinhook.com/',
+    calendarUrl: 'https://thepinhook.com/events/',
+    ticketBase: 'https://thepinhook.com/events/',
     isEtix: false,
   },
+  // NOTE: Kings is temporarily closed as of Aug 2026 — tier 0 means "skip",
+  // so it stops burning a Claude call per day. Flip back to tier 2 to reopen.
   kings: {
-    name: 'Kings', city: 'Raleigh', color: 'magenta', tier: 2,
+    name: 'Kings', city: 'Raleigh', color: 'magenta', tier: 0,
     searchQuery: 'Kings Raleigh NC upcoming live music events concerts',
     calendarUrl: 'https://www.kingsraleigh.com/',
     ticketBase: 'https://www.kingsraleigh.com/',
@@ -132,24 +141,25 @@ const VENUES = {
 };
 
 // ---- TIER 1: SeatGeek API ----
-async function fetchSeatGeekVenue(venueId, venue, clientId) {
+async function fetchSeatGeekRoom(venueId, venue, clientId, slug, room) {
   const today = new Date().toISOString().split('T')[0];
   const future = new Date();
   future.setMonth(future.getMonth() + 6);
   const futureStr = future.toISOString().split('T')[0];
 
   // First, search for the venue to get its SeatGeek ID
-  const searchUrl = `https://api.seatgeek.com/2/venues?slug=${venue.seatgeekSlug}&client_id=${clientId}`;
+  const searchUrl = `https://api.seatgeek.com/2/venues?slug=${slug}&client_id=${clientId}`;
   const searchRes = await fetch(searchUrl);
   if (!searchRes.ok) {
-    console.error(`SeatGeek venue search failed for ${venue.name}: ${searchRes.status}`);
+    console.error(`SeatGeek venue search failed for ${venue.name}${room ? ' — ' + room : ''}: ${searchRes.status}`);
     return [];
   }
   const searchData = await searchRes.json();
 
   if (!searchData.venues || searchData.venues.length === 0) {
     // Try a name-based search as fallback
-    const nameSearchUrl = `https://api.seatgeek.com/2/venues?q=${encodeURIComponent(venue.name)}&city=${encodeURIComponent(venue.city)}&state=NC&client_id=${clientId}`;
+    const fallbackName = room ? `${venue.name} ${room}` : venue.name;
+    const nameSearchUrl = `https://api.seatgeek.com/2/venues?q=${encodeURIComponent(fallbackName)}&city=${encodeURIComponent(venue.city)}&state=NC&client_id=${clientId}`;
     const nameRes = await fetch(nameSearchUrl);
     if (!nameRes.ok) return [];
     const nameData = await nameRes.json();
@@ -215,21 +225,41 @@ async function fetchSeatGeekVenue(venueId, venue, clientId) {
         .filter(Boolean);
       const genre = genres[0] || 'Live Music';
 
+      const where = room ? `${venue.name} (${room})` : venue.name;
+
       return {
         venueId,
+        room: room || null,
         title: e.short_title || e.title,
         date: localDate,
         time: localTime,
         doors: null,
         price,
         genre,
-        description: e.description || `${e.short_title || e.title} at ${venue.name}`,
+        description: e.description || `${e.short_title || e.title} at ${where}`,
         ticketUrl: e.url || venue.ticketBase,
         isEtix: venue.isEtix,
         source: e.url || `https://seatgeek.com`,
         dataSource: 'seatgeek',
       };
     });
+}
+
+// A venue can span more than one SeatGeek listing — Cat's Cradle's main room
+// and its Back Room are separate SeatGeek venues, but they're one venue to a
+// person browsing the calendar. `seatgeekRooms` lets one venueId pull from
+// several slugs; each event carries a `room` label so the UI can notate it.
+async function fetchSeatGeekVenue(venueId, venue, clientId) {
+  const rooms = venue.seatgeekRooms ?? [{ slug: venue.seatgeekSlug, room: null }];
+  const results = await Promise.allSettled(
+    rooms.map(r => fetchSeatGeekRoom(venueId, venue, clientId, r.slug, r.room))
+  );
+  const events = [];
+  results.forEach((res, i) => {
+    if (res.status === 'fulfilled') events.push(...res.value);
+    else console.error(`SeatGeek room "${rooms[i].room ?? 'main'}" failed for ${venue.name}: ${res.reason?.message}`);
+  });
+  return events;
 }
 
 // Scan forward from the first "[" and return just the first complete,
@@ -340,7 +370,7 @@ async function fetchClaudeVenue(venueId, venue, apiKey) {
   const prompt = `You are a live music researcher. Search thoroughly for upcoming concerts and live music events at ${venue.name} in ${venue.city}, NC.
 
 Do MULTIPLE searches to find events:
-1. Search "${venue.name} ${venue.city} upcoming concerts 2026" for their main calendar
+1. Search "${venue.searchQuery}" for their main calendar
 2. Search "${venue.name} schedule summer fall 2026" for future announcements
 3. Search "${venue.name} concerts announced ${currentYear}" for recently announced shows
 4. Search "site:bandsintown.com ${venue.name}" for Bandsintown listings
@@ -348,8 +378,19 @@ Do MULTIPLE searches to find events:
 
 Find ALL REAL, CONFIRMED or ANNOUNCED upcoming music events from ${today} through ${futureStr}. Include shows even if tickets aren't on sale yet — if a show has been announced or is on the schedule, include it.
 
-CRITICAL RULES:
+Today's date is ${today}. The current year is ${currentYear}.
+
+CRITICAL RULES — DATE ACCURACY MATTERS MORE THAN COVERAGE:
 - Only return events you found in actual search results — do NOT invent or guess events
+- The "date" must be the date printed on the listing itself. Never infer a date from
+  a URL, a page title, an artist's tour schedule, or the position of an event in a list.
+- NEVER roll a past show forward. Many venues keep an event page online after the show
+  (e.g. /events/some-band/ stays up for months). If the listing's date is before
+  ${today}, OMIT that event entirely — do not assume it repeats or was rescheduled.
+- Never pair an artist with a date you found somewhere else on the calendar. If you
+  cannot find that specific artist's own date printed on a listing, omit the event.
+- Omit any event whose title you cannot read from the listing. Never emit a
+  placeholder title like "TBA", "TBD", "Live Music" or "Special Guest".
 - Only include music events (concerts, live bands, DJ sets, singer-songwriters)
 - Exclude comedy shows, ballet, plays, film screenings, fundraisers, private events
 - If tickets aren't on sale yet, set price to "TBA"
@@ -399,8 +440,26 @@ Return ONLY the raw JSON array. No explanation, no markdown fences.`;
     return [];
   }
 
+  // Belt-and-braces: the prompt forbids past dates and placeholder titles, but a
+  // model that ignores it shouldn't be able to put a stale show on the calendar.
+  const PLACEHOLDER = /^(tba|tbd|tbc|live music|special guest|announcement)$/i;
   return events
-    .filter(e => e.title && e.date && e.date.match(/^\d{4}-\d{2}-\d{2}$/))
+    .filter(e => {
+      if (!e.title || !e.date || !e.date.match(/^\d{4}-\d{2}-\d{2}$/)) return false;
+      if (PLACEHOLDER.test(String(e.title).trim())) {
+        console.warn(`Dropped placeholder title "${e.title}" for ${venue.name}`);
+        return false;
+      }
+      if (e.date < today) {
+        console.warn(`Dropped past-dated event "${e.title}" (${e.date}) for ${venue.name}`);
+        return false;
+      }
+      if (e.date > futureStr) {
+        console.warn(`Dropped far-future event "${e.title}" (${e.date}) for ${venue.name}`);
+        return false;
+      }
+      return true;
+    })
     .map(e => ({
       venueId,
       title: String(e.title),

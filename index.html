@@ -383,6 +383,22 @@
       color: var(--muted);
     }
 
+    /* Room notation — e.g. Cat's Cradle "Back Room" shows, which are the same
+       venue but a different (much smaller) space. */
+    .room-pill {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.62rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 1px 6px;
+      border-radius: 3px;
+      border: 1px solid currentColor;
+      opacity: 0.75;
+    }
+    .event-card[data-color="purple"]  .room-pill { color: var(--purple); }
+    .event-card[data-color="magenta"] .room-pill { color: var(--magenta); }
+    .event-card[data-color="amber"]   .room-pill { color: var(--amber); }
+
     .event-right {
       display: flex;
       flex-direction: column;
@@ -1026,6 +1042,7 @@ function renderEvents() {
           <div class="event-title">${escHtml(event.title)}</div>
           <div class="event-meta">
             <span class="venue-tag" data-venue="${escHtml(event.venueId)}">${escHtml(venueName)}</span>
+            ${event.room ? `<span class="room-pill">${escHtml(event.room)}</span>` : ''}
             ${time ? `<span class="meta-pill">🕐 ${escHtml(time)}</span>` : ''}
             ${doors ? `<span class="meta-pill">${escHtml(doors)}</span>` : ''}
             ${event.genre && event.genre !== 'Live Music' ? `<span class="meta-pill">${escHtml(event.genre)}</span>` : ''}
@@ -1301,6 +1318,7 @@ function openDayPanel(dateStr, events) {
         <div class="event-title">${escHtml(event.title)}</div>
         <div class="event-meta">
           <span class="venue-tag" data-venue="${escHtml(event.venueId)}">${escHtml(venueName)}</span>
+          ${event.room ? `<span class="room-pill">${escHtml(event.room)}</span>` : ''}
           ${time  ? `<span class="meta-pill">🕐 ${escHtml(time)}</span>` : ''}
           ${doors ? `<span class="meta-pill">${escHtml(doors)}</span>` : ''}
           ${event.genre && event.genre !== 'Live Music' ? `<span class="meta-pill">${escHtml(event.genre)}</span>` : ''}
