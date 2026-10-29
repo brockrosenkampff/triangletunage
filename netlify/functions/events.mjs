@@ -295,10 +295,12 @@ function extractJsonArray(text) {
 //
 // Fall through ONLY on model-not-found errors. Billing (402), rate limit (429)
 // and overload (529) are not fixed by switching models.
+// Haiku first: Tier 2 is a simple extraction job and Haiku costs about a
+// third of Sonnet. Sonnet entries are fallbacks in case Haiku is retired.
 const CLAUDE_MODELS = [
+  'claude-haiku-4-5-20251001',
   'claude-sonnet-4-6',
   'claude-sonnet-5',
-  'claude-haiku-4-5-20251001',
 ];
 
 function isModelNotFound(status, errText) {

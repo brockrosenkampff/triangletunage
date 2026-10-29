@@ -301,10 +301,12 @@ function extractJsonArray(text) {
 //
 // If a fallback ever fires, it logs loudly: promote the working model to the
 // front of this list and drop the dead one.
+// Haiku first: Tier 2 is a simple extraction job and Haiku costs about a
+// third of Sonnet. Sonnet entries are fallbacks in case Haiku is retired.
 const CLAUDE_MODELS = [
+  'claude-haiku-4-5-20251001',
   'claude-sonnet-4-6',
   'claude-sonnet-5',
-  'claude-haiku-4-5-20251001',
 ];
 
 function isModelNotFound(status, errText) {
@@ -478,6 +480,9 @@ Return ONLY the raw JSON array. No explanation, no markdown fences.`;
     }));
 }
 
+// Tier 2 (Claude + web search) is paid, so it re-runs weekly. Tier 1 runs daily.
+const TIER2_REFRESH_DAYS = 6;
+
 // ---- MAIN HANDLER ----
 export default async () => {
   console.log('Starting daily event refresh…');
@@ -488,11 +493,35 @@ export default async () => {
   const allEvents = [];
   const results = { tier1: { success: 0, failed: 0 }, tier2: { success: 0, failed: 0 } };
 
-  // ---- TIER 2: Claude + Web Search ----
-  // Runs FIRST and fully in parallel — this is the slow tier, so it gets
-  // first claim on the function's time budget instead of being starved
-  // after Tier 1 finishes (which is what was happening before).
-  if (anthropicApiKey) {
+  // ---- TIER 2: Claude + Web Search (weekly) ----
+  // Tier 2 costs real money (Claude + web search), Tier 1 is free. So Tier 1
+  // refreshes daily, but Tier 2 only re-runs when its data is TIER2_REFRESH_DAYS
+  // old. In between, the previous Tier 2 events are carried over (past dates
+  // dropped). If a Tier 2 run fails, tier2FetchedAt is not advanced, so the
+  // next daily run retries it.
+  const todayStr = new Date().toISOString().split('T')[0];
+  let prevCache = null;
+  try {
+    const raw = await getStore('events-cache').get('latest');
+    if (raw) prevCache = JSON.parse(raw);
+  } catch (e) {
+    console.warn('Could not read previous cache:', e.message);
+  }
+  const prevTier2At = prevCache?.meta?.tier2FetchedAt || null;
+  const prevClaudeEvents = (prevCache?.events || []).filter(
+    e => e.dataSource === 'claude' && e.date >= todayStr
+  );
+  const tier2Fresh =
+    prevTier2At &&
+    prevClaudeEvents.length > 0 &&
+    Date.now() - Date.parse(prevTier2At) < TIER2_REFRESH_DAYS * 86400000;
+  let tier2FetchedAt = prevTier2At;
+
+  if (anthropicApiKey && tier2Fresh) {
+    console.log(`Tier 2 skipped: last refreshed ${prevTier2At}, carrying over ${prevClaudeEvents.length} events`);
+    allEvents.push(...prevClaudeEvents);
+    results.tier2 = { success: 0, failed: 0, skipped: true };
+  } else if (anthropicApiKey) {
     const tier2Venues = Object.entries(VENUES).filter(([_, v]) => v.tier === 2);
     const tier2Results = await Promise.allSettled(
       tier2Venues.map(async ([venueId, venue]) => {
@@ -509,6 +538,7 @@ export default async () => {
       })
     );
     tier2Results.forEach(r => { if (r.status === 'fulfilled') allEvents.push(...r.value); });
+    if (results.tier2.success > 0) tier2FetchedAt = new Date().toISOString();
   }
 
   // ---- TIER 1: SeatGeek ----
@@ -543,7 +573,6 @@ export default async () => {
       const prev = await store.get('latest');
       if (prev) {
         const prevEvents = (JSON.parse(prev).events || []);
-        const todayStr = new Date().toISOString().split('T')[0];
         const salvaged = prevEvents.filter(e =>
           e.date >= todayStr &&
           ((tier1Dead && e.dataSource === 'seatgeek') ||
@@ -573,6 +602,7 @@ export default async () => {
     meta: {
       total: dedupedEvents.length,
       fetchedAt: new Date().toISOString(),
+      tier2FetchedAt,
       results,
     },
   });
