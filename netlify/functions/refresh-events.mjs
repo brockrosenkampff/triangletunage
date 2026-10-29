@@ -480,69 +480,41 @@ Return ONLY the raw JSON array. No explanation, no markdown fences.`;
     }));
 }
 
-// Tier 2 (Claude + web search) is paid, so it re-runs weekly. Tier 1 runs daily.
+// Tier 2 (Claude + web search) is paid and slow. Scheduled functions are killed
+// at 30 seconds and Tier 2 needs ~30-60s, so it lives in its own background
+// function (refresh-tier2-background.mjs, 15 min limit) and re-runs weekly.
+// This function refreshes Tier 1 (SeatGeek, free, ~2s) every day, carries over
+// the last Tier 2 events, and kicks off the background function when it is due.
 const TIER2_REFRESH_DAYS = 6;
 
-// ---- MAIN HANDLER ----
 export default async () => {
   console.log('Starting daily event refresh…');
 
   const seatgeekClientId = Netlify.env.get('SEATGEEK_CLIENT_ID');
   const anthropicApiKey  = Netlify.env.get('ANTHROPIC_API_KEY');
-
-  const allEvents = [];
-  const results = { tier1: { success: 0, failed: 0 }, tier2: { success: 0, failed: 0 } };
-
-  // ---- TIER 2: Claude + Web Search (weekly) ----
-  // Tier 2 costs real money (Claude + web search), Tier 1 is free. So Tier 1
-  // refreshes daily, but Tier 2 only re-runs when its data is TIER2_REFRESH_DAYS
-  // old. In between, the previous Tier 2 events are carried over (past dates
-  // dropped). If a Tier 2 run fails, tier2FetchedAt is not advanced, so the
-  // next daily run retries it.
   const todayStr = new Date().toISOString().split('T')[0];
+  const store = getStore('events-cache');
+
   let prevCache = null;
   try {
-    const raw = await getStore('events-cache').get('latest');
+    const raw = await store.get('latest');
     if (raw) prevCache = JSON.parse(raw);
   } catch (e) {
     console.warn('Could not read previous cache:', e.message);
   }
-  const prevTier2At = prevCache?.meta?.tier2FetchedAt || null;
-  const prevClaudeEvents = (prevCache?.events || []).filter(
-    e => e.dataSource === 'claude' && e.date >= todayStr
-  );
-  const tier2Fresh =
-    prevTier2At &&
-    prevClaudeEvents.length > 0 &&
-    Date.now() - Date.parse(prevTier2At) < TIER2_REFRESH_DAYS * 86400000;
-  let tier2FetchedAt = prevTier2At;
+  const prevMeta = prevCache?.meta || {};
+  const tier2FetchedAt = prevMeta.tier2FetchedAt || null;
+  const prevEvents = prevCache?.events || [];
+  const prevClaudeEvents = prevEvents.filter(e => e.dataSource === 'claude' && e.date >= todayStr);
 
-  if (anthropicApiKey && tier2Fresh) {
-    console.log(`Tier 2 skipped: last refreshed ${prevTier2At}, carrying over ${prevClaudeEvents.length} events`);
-    allEvents.push(...prevClaudeEvents);
-    results.tier2 = { success: 0, failed: 0, skipped: true };
-  } else if (anthropicApiKey) {
-    const tier2Venues = Object.entries(VENUES).filter(([_, v]) => v.tier === 2);
-    const tier2Results = await Promise.allSettled(
-      tier2Venues.map(async ([venueId, venue]) => {
-        try {
-          const events = await fetchClaudeVenue(venueId, venue, anthropicApiKey);
-          console.log(`Claude: ${venue.name} → ${events.length} events`);
-          results.tier2.success++;
-          return events;
-        } catch (err) {
-          console.error(`Claude error for ${venue.name}:`, err.message);
-          results.tier2.failed++;
-          return [];
-        }
-      })
-    );
-    tier2Results.forEach(r => { if (r.status === 'fulfilled') allEvents.push(...r.value); });
-    if (results.tier2.success > 0) tier2FetchedAt = new Date().toISOString();
-  }
+  // Tier 2 events are carried over untouched; the background function replaces them.
+  const allEvents = [...prevClaudeEvents];
+  const results = {
+    tier1: { success: 0, failed: 0 },
+    tier2: prevMeta.results?.tier2 || { success: 0, failed: 0 },
+  };
 
   // ---- TIER 1: SeatGeek ----
-  // Fast (all 9 venues complete in a few seconds), so it runs after Tier 2.
   if (seatgeekClientId) {
     const tier1Venues = Object.entries(VENUES).filter(([_, v]) => v.tier === 1);
     const tier1Results = await Promise.allSettled(
@@ -562,28 +534,13 @@ export default async () => {
     tier1Results.forEach(r => { if (r.status === 'fulfilled') allEvents.push(...r.value); });
   }
 
-  // ---- SALVAGE GUARD ----
-  // If an entire tier failed, keep that tier's events from the
-  // previous cache instead of wiping them (drop past dates).
+  // ---- SALVAGE GUARD (Tier 1) ----
+  // If all of Tier 1 failed, keep the previous SeatGeek events instead of wiping them.
   const tier1Dead = results.tier1.failed > 0 && results.tier1.success === 0;
-  const tier2Dead = results.tier2.failed > 0 && results.tier2.success === 0;
-  if (tier1Dead || tier2Dead) {
-    try {
-      const store = getStore('events-cache');
-      const prev = await store.get('latest');
-      if (prev) {
-        const prevEvents = (JSON.parse(prev).events || []);
-        const salvaged = prevEvents.filter(e =>
-          e.date >= todayStr &&
-          ((tier1Dead && e.dataSource === 'seatgeek') ||
-           (tier2Dead && e.dataSource === 'claude'))
-        );
-        console.warn(`Tier failure — salvaged ${salvaged.length} events from previous cache (tier1Dead=${tier1Dead}, tier2Dead=${tier2Dead})`);
-        allEvents.push(...salvaged);
-      }
-    } catch (salvageErr) {
-      console.warn('Salvage from previous cache failed:', salvageErr.message);
-    }
+  if (tier1Dead) {
+    const salvaged = prevEvents.filter(e => e.dataSource === 'seatgeek' && e.date >= todayStr);
+    console.warn(`Tier 1 failure — salvaged ${salvaged.length} events from previous cache`);
+    allEvents.push(...salvaged);
   }
 
   // ---- DEDUPLICATE & SORT ----
@@ -597,7 +554,7 @@ export default async () => {
   dedupedEvents.sort((a, b) => new Date(a.date) - new Date(b.date));
 
   // ---- STORE TO BLOBS ----
-  const payload = JSON.stringify({
+  await store.set('latest', JSON.stringify({
     events: dedupedEvents,
     meta: {
       total: dedupedEvents.length,
@@ -605,11 +562,25 @@ export default async () => {
       tier2FetchedAt,
       results,
     },
-  });
-
-  const store = getStore('events-cache');
-  await store.set('latest', payload);
+  }));
   console.log(`Refresh complete: ${dedupedEvents.length} events stored to Blobs`);
+
+  // ---- KICK OFF TIER 2 IF DUE ----
+  const tier2Due =
+    !tier2FetchedAt ||
+    prevClaudeEvents.length === 0 ||
+    Date.now() - Date.parse(tier2FetchedAt) >= TIER2_REFRESH_DAYS * 86400000;
+  if (anthropicApiKey && tier2Due) {
+    try {
+      const base = Netlify.env.get('URL') || 'https://triangletunage.com';
+      const res = await fetch(`${base}/.netlify/functions/refresh-tier2-background`, { method: 'POST' });
+      console.log(`Tier 2 background function triggered: HTTP ${res.status}`);
+    } catch (err) {
+      console.error('Could not trigger Tier 2 background function:', err.message);
+    }
+  } else {
+    console.log(`Tier 2 not due (last refreshed ${tier2FetchedAt})`);
+  }
 };
 
 // Run daily at 9am UTC (5am ET)
