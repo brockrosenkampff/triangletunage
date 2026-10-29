@@ -129,10 +129,9 @@ const VENUES = {
     ticketBase: 'https://thepinhook.com/events/',
     isEtix: false,
   },
-  // NOTE: Kings is temporarily closed as of Aug 2026 — tier 0 means "skip",
-  // so it stops burning a Claude call per day. Flip back to tier 2 to reopen.
+  // Kings reopened (confirmed Oct 2026). tier 0 means "skip" if it ever closes again.
   kings: {
-    name: 'Kings', city: 'Raleigh', color: 'magenta', tier: 0,
+    name: 'Kings', city: 'Raleigh', color: 'magenta', tier: 2,
     searchQuery: 'Kings Raleigh NC upcoming live music events concerts',
     calendarUrl: 'https://www.kingsraleigh.com/',
     ticketBase: 'https://www.kingsraleigh.com/',

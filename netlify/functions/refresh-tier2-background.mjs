@@ -131,10 +131,9 @@ const VENUES = {
     ticketBase: 'https://thepinhook.com/events/',
     isEtix: false,
   },
-  // NOTE: Kings is temporarily closed as of Aug 2026 — tier 0 means "skip",
-  // so it stops burning a Claude call per day. Flip back to tier 2 to reopen.
+  // Kings reopened (confirmed Oct 2026). tier 0 means "skip" if it ever closes again.
   kings: {
-    name: 'Kings', city: 'Raleigh', color: 'magenta', tier: 0,
+    name: 'Kings', city: 'Raleigh', color: 'magenta', tier: 2,
     searchQuery: 'Kings Raleigh NC upcoming live music events concerts',
     calendarUrl: 'https://www.kingsraleigh.com/',
     ticketBase: 'https://www.kingsraleigh.com/',
@@ -506,8 +505,10 @@ export default async () => {
   if (!prev) { console.warn('Tier 2: no cache yet, run refresh-events first'); return; }
 
   const lastAt = prev.meta?.tier2FetchedAt;
+  const configuredTier2 = Object.entries(VENUES).filter(([_, v]) => v.tier === 2).map(([id]) => id).sort();
+  const venueSetChanged = JSON.stringify(prev.meta?.tier2Venues || null) !== JSON.stringify(configuredTier2);
   const hasClaude = (prev.events || []).some(e => e.dataSource === 'claude' && e.date >= todayStr);
-  if (lastAt && hasClaude && Date.now() - Date.parse(lastAt) < TIER2_REFRESH_DAYS * 86400000) {
+  if (lastAt && hasClaude && !venueSetChanged && Date.now() - Date.parse(lastAt) < TIER2_REFRESH_DAYS * 86400000) {
     console.log(`Tier 2 skipped: last refreshed ${lastAt}`);
     return;
   }
@@ -560,6 +561,7 @@ export default async () => {
       ...latest.meta,
       total: deduped.length,
       tier2FetchedAt: new Date().toISOString(),
+      tier2Venues: configuredTier2,
       results: { ...(latest.meta?.results || {}), tier2: results },
     },
   }));
